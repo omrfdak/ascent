@@ -1,0 +1,24 @@
+project     = Ascent
+description = "Ascent - building a provably fair crash game with Felgo"
+version     = 1.0.0
+
+outputdir     = html
+outputformats = HTML
+
+# Prose lives in .qdoc files next to this config. Code is never pasted into them:
+# \snippet pulls it out of the real sources, which is why the project root is an
+# example dir. A sample in the tutorial is therefore always a sample that compiles.
+sourcedirs  = .
+exampledirs = ..
+imagedirs   = images
+
+sourcefile.extensions = *.qdoc
+
+# This is a tutorial, not an API reference, so there is no module header to parse.
+moduleheader =
+
+navigation.homepage = "Ascent"
+
+# A broken link or an unresolved snippet fails the run instead of scrolling past.
+warninglimit         = 0
+warninglimit.enabled = true

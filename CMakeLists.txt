@@ -51,6 +51,22 @@ target_compile_definitions(appAscent
 
 target_link_libraries(appAscent PRIVATE Felgo)
 
+# The tutorial is generated on demand: cmake --build . --target docs
+# It is kept out of the default build so a documentation warning cannot break a
+# code build. To have it generated along with the project, tick "docs" next to
+# "all" under Build Settings > Build Steps in the Qt Creator.
+get_target_property(QtQmakeExecutable Qt6::qmake IMPORTED_LOCATION)
+get_filename_component(QtBinDir "${QtQmakeExecutable}" DIRECTORY)
+find_program(QDOC_EXECUTABLE NAMES qdoc HINTS "${QtBinDir}")
+
+if(QDOC_EXECUTABLE)
+  add_custom_target(docs
+    COMMAND ${QDOC_EXECUTABLE} ascent.qdocconf
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc
+    COMMENT "Generating the tutorial with qdoc"
+    VERBATIM)
+endif()
+
 # The core logic is plain QtCore, so its tests run on the desktop host only.
 if(NOT IOS AND NOT ANDROID)
   enable_testing()
