@@ -46,6 +46,10 @@ GameWindow {
     }
   }
 
+  GameAudio {
+    id: gameAudio
+  }
+
   Connections {
     target: Rounds
 

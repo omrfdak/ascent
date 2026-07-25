@@ -86,6 +86,33 @@ Item {
     font.pixelSize: 14
   }
 
+  // Felgo pauses every sound and the music from these two settings and keeps
+  // them across runs, so silencing the game is a one line switch. It sits in
+  // the corner until the menu arrives to give it a proper home.
+  Text {
+    id: soundToggle
+
+    anchors {
+      top: parent.top
+      right: parent.right
+      margins: 12
+    }
+    text: settings.soundEnabled ? qsTr("sound on") : qsTr("sound off")
+    color: Qt.rgba(0.561, 0.639, 0.816, 1)
+    font.pixelSize: 14
+
+    MouseArea {
+      anchors {
+        fill: parent
+        margins: -8
+      }
+      onClicked: {
+        settings.soundEnabled = !settings.soundEnabled
+        settings.musicEnabled = settings.soundEnabled
+      }
+    }
+  }
+
   BettingPanel {
     id: bettingPanel
 
