@@ -9,4 +9,5 @@ function(add_core_test name)
   add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
-add_core_test(tst_hashing)
+add_core_test(HashingTest)
+add_core_test(CrashCurveTest ${CMAKE_SOURCE_DIR}/src/CrashCurve.cpp)

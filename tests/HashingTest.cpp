@@ -48,4 +48,4 @@ void HashingTest::sha256ChangesWithInput()
 
 QTEST_APPLESS_MAIN(HashingTest)
 
-#include "tst_hashing.moc"
+#include "HashingTest.moc"
