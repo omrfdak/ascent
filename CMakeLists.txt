@@ -50,3 +50,9 @@ target_compile_definitions(appAscent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 target_link_libraries(appAscent PRIVATE Felgo)
+
+# The core logic is plain QtCore, so its tests run on the desktop host only.
+if(NOT IOS AND NOT ANDROID)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
