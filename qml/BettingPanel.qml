@@ -1,63 +1,95 @@
 /*!
- * Everything the player can do during a round: choose a stake, put it in, and
- * take it out again before the balloon pops.
+ * Everything the player can do during a round: choose a stake, choose where to
+ * be taken out automatically, put the stake in, and take it out by hand before
+ * the balloon pops.
+ *
+ * The two steppers and the action button share one grid, so the columns line up
+ * because they are the same columns - not because two rows were given matching
+ * widths and kept in step by hand.
  */
 
 import QtQuick
+import QtQuick.Layouts
 import Ascent
 
-Column {
+GridLayout {
   id: root
 
-  spacing: 8
+  columns: 3
+  rowSpacing: 8
+  columnSpacing: 10
 
-  Row {
-    id: stakeRow
+  GameButton {
+    id: lowerStakeButton
 
-    anchors.horizontalCenter: parent.horizontalCenter
-    spacing: 10
-
-    GameButton {
-      id: lowerButton
-
-      text: qsTr("−")
-      // The limits are enforced by the wallet as well; blocking the button is
-      // about not offering a move that would only be refused.
-      enabled: _.canChangeStake && _.stake - _.stakeStep >= PlayerWallet.minimumBet
-      onClicked: _.stake -= _.stakeStep
-    }
-
-    Text {
-      id: stakeLabel
-
-      anchors.verticalCenter: parent.verticalCenter
-      width: 90
-      horizontalAlignment: Text.AlignHCenter
-      text: qsTr("%1 pts").arg(_.stake)
-      color: Qt.rgba(1, 1, 1, 1)
-      font.pixelSize: 18
-    }
-
-    GameButton {
-      id: raiseButton
-
-      text: qsTr("+")
-      enabled: _.canChangeStake && _.stake + _.stakeStep <= _.highestAffordableStake
-      onClicked: _.stake += _.stakeStep
-    }
+    Layout.preferredWidth: _.stepperWidth
+    text: qsTr("−")
+    // The limits are enforced by the wallet as well; blocking the button is
+    // about not offering a move that would only be refused.
+    enabled: _.canChangeStake && _.stake - _.stakeStep >= PlayerWallet.minimumBet
+    onClicked: _.stake -= _.stakeStep
   }
 
-  AutoCashOutRow {
-    id: autoCashOutRow
+  Text {
+    id: stakeLabel
 
-    anchors.horizontalCenter: parent.horizontalCenter
+    Layout.fillWidth: true
+    Layout.minimumWidth: _.labelWidth
+    horizontalAlignment: Text.AlignHCenter
+    text: qsTr("%1 pts").arg(_.stake)
+    color: Qt.rgba(1, 1, 1, 1)
+    font.pixelSize: 18
+  }
+
+  GameButton {
+    id: raiseStakeButton
+
+    Layout.preferredWidth: _.stepperWidth
+    text: qsTr("+")
+    enabled: _.canChangeStake && _.stake + _.stakeStep <= _.highestAffordableStake
+    onClicked: _.stake += _.stakeStep
+  }
+
+  GameButton {
+    id: lowerTargetButton
+
+    Layout.preferredWidth: _.stepperWidth
+    text: qsTr("−")
+    enabled: Rounds.engine.autoCashOutAt >= _.lowestTarget + _.targetStep
+    onClicked: Rounds.engine.autoCashOutAt = Rounds.engine.autoCashOutAt - _.targetStep
+  }
+
+  Text {
+    id: targetLabel
+
+    Layout.fillWidth: true
+    Layout.minimumWidth: _.labelWidth
+    horizontalAlignment: Text.AlignHCenter
+
+    // Off is a state worth naming. A row showing "1.00x" would read as a
+    // setting that cashes out instantly.
+    text: _.isAutoOn
+      ? qsTr("auto %1x").arg(Rounds.engine.autoCashOutAt.toFixed(2))
+      : qsTr("auto off")
+    color: _.isAutoOn ? Qt.rgba(1, 1, 1, 1) : Qt.rgba(0.45, 0.5, 0.62, 1)
+    font.pixelSize: 14
+  }
+
+  GameButton {
+    id: raiseTargetButton
+
+    Layout.preferredWidth: _.stepperWidth
+    text: qsTr("+")
+    enabled: Rounds.engine.autoCashOutAt < _.highestTarget
+    onClicked: Rounds.engine.autoCashOutAt = Math.max(_.lowestTarget,
+                                                      Rounds.engine.autoCashOutAt) + _.targetStep
   }
 
   GameButton {
     id: actionButton
 
-    anchors.horizontalCenter: parent.horizontalCenter
-    width: 200
+    Layout.columnSpan: 3
+    Layout.fillWidth: true
     text: _.actionText
     enabled: _.actionEnabled
     onClicked: _.act()
@@ -66,6 +98,9 @@ Column {
   QtObject {
     id: _
 
+    readonly property real stepperWidth: 48
+    readonly property real labelWidth: 110
+
     readonly property int stakeStep: 25
 
     // Never more than the player has, whatever the table maximum says.
@@ -73,6 +108,16 @@ Column {
                                                            PlayerWallet.balance)
 
     property int stake: PlayerWallet.minimumBet
+
+    readonly property real targetStep: 0.25
+
+    // The lowest target worth offering. Below this the payout barely covers the
+    // stake, and the engine treats 1.00x as off anyway.
+    readonly property real lowestTarget: 1.25
+
+    readonly property real highestTarget: 50
+
+    readonly property bool isAutoOn: Rounds.engine.autoCashOutAt > 0
 
     readonly property bool isBettingOpen: Rounds.engine.state === RoundEngine.Betting
     readonly property bool isRoundRunning: Rounds.engine.state === RoundEngine.Running

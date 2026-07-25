@@ -20,7 +20,11 @@ GameWindow {
     id: scene
 
     width: 320
-    height: 480
+
+    // Taller than the window's own ratio: the scene scales to fit, so the extra
+    // logical height is room the layout can give to the balloon rather than
+    // pixels the window has to find. Everything else keeps its proportions.
+    height: 600
 
     // Fills the whole window, not just the scene, so no letterbox bars show
     // through on a wider display.
