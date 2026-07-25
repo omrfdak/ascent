@@ -23,6 +23,7 @@ class RoundEngine : public QObject
   Q_PROPERTY(State state READ state NOTIFY stateChanged)
   Q_PROPERTY(qreal multiplier READ multiplier NOTIFY multiplierChanged)
   Q_PROPERTY(qint64 bet READ bet NOTIFY betChanged)
+  Q_PROPERTY(bool hasCashedOut READ hasCashedOut NOTIFY hasCashedOutChanged)
 
 public:
   enum State {
@@ -61,6 +62,7 @@ signals:
   void stateChanged();
   void multiplierChanged();
   void betChanged();
+  void hasCashedOutChanged();
 
   void roundStarted();
   void cashedOut(qint64 payout, qreal multiplier);
@@ -69,6 +71,7 @@ signals:
 private:
   void setState(State state);
   void setMultiplier(qreal multiplier);
+  void setHasCashedOut(bool hasCashedOut);
 
   CrashCurve *m_curve;
   Wallet *m_wallet;

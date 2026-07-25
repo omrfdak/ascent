@@ -23,6 +23,7 @@ private slots:
   void paysTheMultiplierThatWasOnScreen();
   void losesTheBetWhenThePlayerWaitsTooLong();
   void clearsTheBetWhenTheNextRoundOpens();
+  void announcesWhetherThePlayerIsStillIn();
 
 private:
   CrashCurve m_curve;
@@ -190,6 +191,30 @@ void RoundEngineTest::clearsTheBetWhenTheNextRoundOpens()
 
   // And the next round is a clean slate, not a continuation of the last one.
   QVERIFY(m_engine->placeBet(100));
+}
+
+void RoundEngineTest::announcesWhetherThePlayerIsStillIn()
+{
+  QSignalSpy spy(m_engine.get(), &RoundEngine::hasCashedOutChanged);
+
+  QVERIFY(m_engine->placeBet(100));
+  QVERIFY(m_engine->startRound(5.0));
+  QVERIFY(m_engine->advanceTo(6940));
+
+  QVERIFY(!m_engine->hasCashedOut());
+  QVERIFY(m_engine->cashOut());
+
+  // The button that offers the cash out has to hear about it, otherwise it
+  // keeps offering a move the engine will refuse.
+  QVERIFY(m_engine->hasCashedOut());
+  QCOMPARE(spy.count(), 1);
+
+  QVERIFY(m_engine->advanceTo(60000));
+  QVERIFY(m_engine->settle());
+  QVERIFY(m_engine->openBetting());
+
+  QVERIFY(!m_engine->hasCashedOut());
+  QCOMPARE(spy.count(), 2);
 }
 
 QTEST_APPLESS_MAIN(RoundEngineTest)

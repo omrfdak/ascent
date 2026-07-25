@@ -46,12 +46,24 @@ Item {
   Text {
     id: balanceLabel
 
-    anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.margins: 12
+    anchors {
+      top: parent.top
+      left: parent.left
+      margins: 12
+    }
     text: qsTr("%1 pts").arg(PlayerWallet.balance)
     color: Qt.rgba(0.561, 0.639, 0.816, 1)
     font.pixelSize: 14
+  }
+
+  BettingPanel {
+    id: bettingPanel
+
+    anchors {
+      bottom: parent.bottom
+      horizontalCenter: parent.horizontalCenter
+      bottomMargin: 36
+    }
   }
 
   // The proof, on screen before anyone can bet on the round it decides. It is
@@ -60,9 +72,11 @@ Item {
   Text {
     id: commitmentLabel
 
-    anchors.bottom: parent.bottom
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.margins: 12
+    anchors {
+      bottom: parent.bottom
+      horizontalCenter: parent.horizontalCenter
+      margins: 12
+    }
     text: qsTr("round hash %1…").arg(Rounds.commitment.substring(0, 12))
     color: Qt.rgba(0.35, 0.4, 0.55, 1)
     font.pixelSize: 12

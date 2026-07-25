@@ -40,8 +40,10 @@ Item {
   Rectangle {
     id: knot
 
-    anchors.top: envelope.bottom
-    anchors.horizontalCenter: envelope.horizontalCenter
+    anchors {
+      top: envelope.bottom
+      horizontalCenter: envelope.horizontalCenter
+    }
     width: 8
     height: 6
     radius: 2
@@ -51,8 +53,10 @@ Item {
   Rectangle {
     id: tether
 
-    anchors.top: knot.bottom
-    anchors.horizontalCenter: knot.horizontalCenter
+    anchors {
+      top: knot.bottom
+      horizontalCenter: knot.horizontalCenter
+    }
     width: 1
     height: root.height - envelope.height - knot.height
     color: Qt.rgba(0.6, 0.65, 0.8, 0.6)

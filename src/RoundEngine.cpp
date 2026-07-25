@@ -59,7 +59,7 @@ bool RoundEngine::startRound(qreal crashPoint)
     return false;
 
   m_crashPoint = crashPoint;
-  m_hasCashedOut = false;
+  setHasCashedOut(false);
   setMultiplier(1.0);
   setState(Running);
 
@@ -101,7 +101,7 @@ bool RoundEngine::cashOut()
   if (m_state != Running || m_hasCashedOut || m_bet == 0)
     return false;
 
-  m_hasCashedOut = true;
+  setHasCashedOut(true);
 
   const qint64 payout = m_wallet->payOut(m_bet, m_multiplier);
   emit cashedOut(payout, m_multiplier);
@@ -125,7 +125,7 @@ bool RoundEngine::openBetting()
     return false;
 
   m_bet = 0;
-  m_hasCashedOut = false;
+  setHasCashedOut(false);
   setMultiplier(1.0);
   setState(Betting);
 
@@ -141,6 +141,15 @@ void RoundEngine::setState(State state)
 
   m_state = state;
   emit stateChanged();
+}
+
+void RoundEngine::setHasCashedOut(bool hasCashedOut)
+{
+  if (m_hasCashedOut == hasCashedOut)
+    return;
+
+  m_hasCashedOut = hasCashedOut;
+  emit hasCashedOutChanged();
 }
 
 void RoundEngine::setMultiplier(qreal multiplier)
