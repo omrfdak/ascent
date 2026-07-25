@@ -94,13 +94,17 @@ if(APPLE AND NOT IOS)
   # macOS then reads the bundle as one whose resources have gone missing and
   # declines to trust it, which it shows by refusing to use its icon.
   #
-  # Registered after the copy steps so it is the last thing that runs. Editing
-  # the deployed QML by hand invalidates it again, which costs nothing but the
-  # icon until the next build.
-  add_custom_command(TARGET Ascent POST_BUILD
+  # A target of its own rather than a POST_BUILD step, because a POST_BUILD step
+  # belongs to the link and a QML-only change does not relink: the file would be
+  # copied in, the signature would be left describing the file before it, and the
+  # icon would go missing on the one kind of build that happens most often. A
+  # target is always out of date, so this runs after every build, and it depends
+  # on the whole of Ascent so it runs after the copies rather than beside them.
+  add_custom_target(AscentSignature ALL
     COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:Ascent>"
     COMMENT "Signing the bundle so macOS accepts its resources"
     VERBATIM)
+  add_dependencies(AscentSignature Ascent)
 endif()
 
 # The tutorial is generated on demand: cmake --build . --target docs
