@@ -9,12 +9,14 @@ import QtQuick
 GameParticle {
   id: root
 
+  //! [burst]
   // A short burst, not a fountain: everything is thrown out in a tenth of a
   // second and the emitter goes quiet on its own.
   emitterType: ParticleBase.Gravity
   duration: 0.1
   maxParticles: 90
   emissionRate: 900
+  //! [burst]
 
   particleLifespan: 0.7
   particleLifespanVariance: 0.25

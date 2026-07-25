@@ -4,11 +4,142 @@
     \previouspage The Round State Machine
     \nextpage Persistence, Stats and Shipping
 
-    \section1 Animating the Balloon
+    Everything up to here decides what happens. Nothing up to here makes anyone
+    want to watch it happen. This chapter is the difference between a number
+    that goes up and a round somebody sits through.
 
-    \section1 Popping It with Particles
+    None of it touches the wallet or the crash point. That separation is the
+    point: effects are allowed to exaggerate precisely because they cannot
+    change the result.
 
-    \section1 Sound and Screen Shake
+    \section1 The Pop
+
+    The crash is the loudest moment in the game and it lasts a tenth of a
+    second, so it gets four things at once: particles, a jolt, a flash and a
+    sound. They are separate components, all fired from the same signal.
+
+    \snippet qml/CrashBurst.qml burst
+
+    One emitter, declared once and restarted, rather than an effect created per
+    crash. A game that builds a new emitter every round leaks a little each time
+    and gets slower the longer somebody enjoys it. \c autoStart is false and the
+    scene calls \c start() from \c onRoundCrashed, positioned at wherever the
+    balloon had climbed to before the binding pulls it back down.
+
+    The texture is a 32x32 white spark. It is white on purpose - the emitter
+    tints it, so one file covers every colour of effect the game may want later.
+
+    \section1 Shaking a Screen That Is Held by Anchors
+
+    A jolt wants to move the scene by a few pixels. Anchored children refuse to
+    be moved, and dropping their anchors to allow it costs the layout.
+
+    \snippet qml/ScreenShake.qml screen-shake
+
+    The component animates nothing but two numbers. The scene applies them as a
+    \c Translate transform, which happens after layout and therefore has no
+    opinion about anchors:
+
+    \code
+    transform: Translate {
+      x: screenShake.offsetX
+      y: screenShake.offsetY
+    }
+    \endcode
+
+    The amplitude decays to zero over 260 ms while the phase runs through four
+    swings, and the vertical axis uses a different frequency so the jolt traces
+    a figure instead of sliding back and forth along one line.
+
+    A quarter of a second is a deliberate ceiling. The multiplier has to be
+    readable again before the player has finished deciding how they feel about
+    the round that just ended.
+
+    \section1 A Loop With No Seam
+
+    \snippet qml/GameAudio.qml background-music
+
+    The music is generated rather than licensed, which turns the usual hardest
+    part of looping audio into arithmetic: the loop is eight seconds long and
+    every partial in it lasts a whole number of cycles, so the waveform at the
+    end of the loop is the waveform at the start. Notes whose tails run past the
+    end are written back into the beginning of the same buffer.
+
+    The format is the other half of it. An mp3 arrives with encoder padding at
+    both ends, and that padding is audible as a gap on every repeat. A wav has
+    none, costs 705 KB for eight seconds, and never has to be argued with.
+
+    Short effects are GameSoundEffect rather than BackgroundMusic - the first is
+    built for low latency, the second for long compressed files. Each effect is
+    declared once and replayed, for the same reason the emitter is: loading a
+    sound at the moment it is needed is how a game ends up with a pop that
+    arrives after the balloon has gone.
+
+    Felgo pauses every instance of both types from \c settings.soundEnabled and
+    \c settings.musicEnabled, and stores those across runs, so muting the game
+    is a property assignment rather than a bookkeeping exercise.
+
+    \section1 A Sky That Cannot Run Out
+
+    The balloon climbs and the multiplier has no ceiling, so a background that
+    moves with it has to be endless in both senses: it must never run out of
+    sky, and it must never stop scrolling.
+
+    \snippet qml/SkyBackground.qml climb
+
+    Reading altitude off the logarithm is what keeps it moving. Tied to the
+    multiplier directly, the scenery would have left the atmosphere by 5x and
+    stood still for the rest of the round - which is exactly the part of the
+    round worth watching.
+
+    Each layer scrolls at its own multiple of that, and wraps:
+
+    \snippet qml/SkyLayer.qml wrap
+
+    The same field of clouds is drawn twice, one above the other, and the pair
+    is slid by the wrapped offset. Because the pair always covers the range from
+    minus one height to plus one height, the visible band is inside it wherever
+    the scroll has got to. There is no seam to catch and no special case at the
+    top of the layer, which is the failure mode of the more obvious version with
+    a single copy and a reset.
+
+    Cloud positions are hashed from the index rather than drawn at random. Both
+    copies have to agree on where every cloud is, or the wrap becomes visible
+    the moment it happens.
+
+    Two details that are cheaper than they look: the sky darkens by fading one
+    fixed gradient over another instead of recolouring gradient stops, because
+    moving stops mean a new gradient texture every frame; and the drop back to
+    1.00x when the next round opens is animated only while betting is open, so
+    the sky descends instead of cutting.
+
+    \section1 The Number Is Not Allowed To Lie
+
+    Everything above is free to exaggerate. The multiplier is not.
+
+    \snippet qml/MultiplierReadout.qml tension
+
+    One value, zero at 1.00x and one at 10x, drives the size, the colour and the
+    pulse. The text itself is bound straight to the engine with no easing and no
+    animated counter - a number that slides towards its target is a number
+    somebody could read, tap on, and turn out not to have cashed out at.
+
+    \snippet qml/MultiplierReadout.qml heartbeat
+
+    The beat tightens from roughly 900 ms down to 280 ms as the round climbs.
+    Animation durations are read when a loop starts and not while it runs, so a
+    fast round speeds up between beats instead of stuttering inside one.
+
+    \section1 What This Costs
+
+    Nothing in this chapter runs a clock of its own. The particles, the shake,
+    the flash and the punch are all fired by \c onRoundCrashed; the sky and the
+    tension are bindings on a multiplier that was already changing. The scene
+    has one moving part and everything else is a consequence of it.
+
+    That is the test worth applying to any of it: an effect that needs its own
+    clock will eventually disagree with the round, and it will disagree in the
+    frame that matters most.
 
     \include includes/chapters.qdocinc chapters
 */

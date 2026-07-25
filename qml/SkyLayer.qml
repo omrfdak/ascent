@@ -57,9 +57,11 @@ Item {
   QtObject {
     id: _
 
+    //! [wrap]
     // The pair covers [-height, height], so the visible band is always inside it.
     readonly property real wrapped: ((root.offset % root.height) + root.height) % root.height
       - root.height
+    //! [wrap]
 
     // Positions have to come out the same on every evaluation or the two copies
     // would not line up, so they are hashed from the index instead of drawn.
