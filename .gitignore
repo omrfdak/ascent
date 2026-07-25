@@ -1,0 +1,17 @@
+# Build output
+build/
+build-*/
+CMakeCache.txt
+CMakeFiles/
+*.app/
+
+# Qt Creator
+*.user
+*.user.*
+CMakeLists.txt.user*
+
+# macOS
+.DS_Store
+
+# Generated documentation — committed deliberately before submission
+doc/html/
