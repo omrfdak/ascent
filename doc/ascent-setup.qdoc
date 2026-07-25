@@ -76,17 +76,21 @@
 
     \snippet main.cpp register-core-types
 
-    Three of the four types are registered as creatable, so QML can write
-    \c {CrashCurve {}} and get one. The round engine is not: it needs a curve and
-    a wallet to mean anything, and a half-built engine conjured out of QML would
-    be a bug waiting to happen. Registering it as uncreatable still exposes its
-    states and properties to QML, which is exactly what the UI needs, while
-    refusing to instantiate it.
+    Notice that QML is not handed the means to build any of this. A running game
+    has exactly one wallet and one stream of rounds, so those two objects are
+    registered as singletons: QML can read \c {PlayerWallet.balance} and call
+    \c {Rounds.requestCashOut()}, but it cannot invent a second wallet, and a
+    second wallet is precisely the kind of bug that only shows up once someone
+    has real points in it.
 
-    Build and run, and the window comes up with the multiplier the curve reports
-    at ten seconds printed in it. It is not a game yet - nothing moves and there
-    is nothing to press - but the two halves of the app are connected, and every
-    chapter from here on adds to a running program.
+    The round engine is registered too, as an uncreatable type. That sounds
+    pointless until you need \c {RoundEngine.Running} in a binding - registering
+    it is what makes the state names exist in QML, without offering to
+    instantiate an engine that would have nothing to run.
+
+    Build and run, and the window comes up dark and empty. It is not a game yet -
+    nothing moves and there is nothing to press - but the two halves of the app
+    are connected, and every chapter from here on adds to a running program.
 
     \include includes/chapters.qdocinc chapters
 */

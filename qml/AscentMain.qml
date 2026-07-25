@@ -5,6 +5,7 @@
 
 import Felgo
 import QtQuick
+import Ascent
 
 //! [game-window]
 GameWindow {
@@ -30,11 +31,13 @@ GameWindow {
       color: Qt.rgba(0.043, 0.063, 0.149, 1)
     }
 
-    CorePreview {
-      id: corePreview
+    GameScene {
+      id: gameScene
 
-      anchors.centerIn: parent
+      anchors.fill: parent
     }
   }
+
+  Component.onCompleted: Rounds.start()
 }
 //! [game-window]
