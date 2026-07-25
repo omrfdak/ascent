@@ -10,14 +10,52 @@
     keep your bet times the multiplier. Wait one tick too long and you keep
     nothing.
 
-    This tutorial builds the whole game with Felgo, from an empty project to
-    something you could publish - including the part most crash games gloss over:
-    proving to the player that the outcome was fixed before the round started and
-    was never influenced by their bet.
+    It is a deceptively small game to describe and a surprisingly interesting one
+    to build, because the fun lives entirely in a number going up and in the
+    player's nerve running out. There is no enemy to fight and no level to
+    design. There is a curve, a clock, and a button.
 
     \section1 What You Will Build
 
+    By the end of this tutorial you will have a complete, publishable Felgo game:
+    a balloon that rises with the multiplier, a betting window that opens and
+    closes on its own, particles when the round pops, sound, persistent points,
+    statistics, and a build that runs on both macOS and iOS.
+
+    You will also have built the part most crash games keep quiet about. Before
+    each round starts, Ascent shows you the SHA-256 hash of the seed that decides
+    where the balloon pops. When the round is over it reveals the seed. Anyone
+    can hash it, compare it to what they were shown, and recompute the crash
+    point themselves. The game cannot change its mind after seeing your bet, and
+    you cannot read the outcome out of the hash. This is called a provably fair
+    scheme, and it is the reason the architecture in this tutorial looks the way
+    it does.
+
     \section1 Which Pieces the Game Needs
+
+    Before writing anything, it is worth listing what a round actually consists
+    of. Take a moment to guess before reading on - it is a short list, and the
+    shape of the code follows directly from it.
+
+    \list
+        \li Something that turns elapsed time into a multiplier. A curve, not a
+            counter: the payout has to accelerate, otherwise waiting is free.
+        \li Something that decides where the round pops, before the round starts,
+            and can prove afterwards that it did not cheat.
+        \li Something that owns the player's points and the rules around them -
+            minimum bet, maximum bet, what a payout is worth.
+        \li Something that knows which of those actions are legal right now.
+            Betting mid-round is not, cashing out twice is not, cashing out after
+            the pop is definitely not.
+        \li And on top of all of that, the part the player actually sees: a
+            balloon, a number, a button, and enough noise and motion to make a
+            number going up feel like something is at stake.
+    \endlist
+
+    The first four are plain C++ with no idea that Felgo or QML exist, which is
+    what makes them testable. The last one is QML, where Felgo does the heavy
+    lifting. Every chapter below builds one of those pieces and then shows it on
+    screen.
 
     \include includes/chapters.qdocinc chapters
 */

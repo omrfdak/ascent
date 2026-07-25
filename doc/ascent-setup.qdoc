@@ -4,13 +4,89 @@
     \previouspage Ascent
     \nextpage Provably Fair Randomness
 
+    This chapter gets a window on screen and the multiplier curve behind it. By
+    the end you will have an empty but running Felgo game, a C++ class that turns
+    a duration into a multiplier, and that class talking to QML.
+
     \section1 Creating the Project
+
+    Create a new Felgo project from Qt Creator's wizard, or start from an empty
+    directory with a \c CMakeLists.txt. The Felgo-specific part of it is short:
+
+    \snippet CMakeLists.txt felgo-project
+
+    \c find_package(Felgo) brings in everything Felgo ships - the QML types, the
+    plugins, the deployment helpers. The product variables underneath it are what
+    end up in the app bundle: the identifier that identifies your app to the app
+    stores, the version the store shows, and the license key. Leave the key empty
+    while you build. It only removes the Felgo splash screen, and the splash
+    screen turns out to be something we have to handle anyway.
+
+    \c PRODUCT_STAGE stays at \c test until the very end, when switching it to
+    \c publish is part of preparing a release build.
 
     \section1 The Game Window and the Scene
 
+    A Felgo game starts with a \c GameWindow containing at least one \c Scene:
+
+    \snippet qml/AscentMain.qml game-window
+
+    Those two types are doing more than they look like. \c GameWindow is the
+    application window, and \c screenWidth and \c screenHeight only decide how
+    big it opens on a desktop - on a phone it fills the screen instead.
+
+    \c Scene is where resolution independence happens. You give it a logical size
+    once, here 320 by 480, and then position everything inside it in those
+    coordinates forever. Felgo scales the scene to whatever display it lands on
+    and letterboxes the remainder. That is why the background rectangle is
+    anchored to \c fullWindowAnchorItem rather than to the scene: the scene is
+    the play area, but the window may be taller or wider than it, and without
+    that anchor the letterbox bars would show through as grey.
+
+    Portrait, by the way, is not an arbitrary choice. The balloon rises, so
+    vertical space is the playfield - and it is the right shape for a phone.
+
     \section1 From Elapsed Time to a Multiplier
 
-    \section1 Handling the Felgo Splash Screen
+    Now the first piece of actual game logic. A crash game's multiplier grows
+    exponentially: slowly at the start, then faster and faster. That shape is
+    what makes waiting stop feeling free at some point, which is the entire
+    tension of the game.
+
+    \snippet src/CrashCurve.cpp multiplier-at
+
+    Two things are worth pointing out. The first is what the function does
+    \e not do: it holds no state about the round. It does not know whether a
+    round is running, when it started, or whether anyone has bet. You give it a
+    duration and it gives you a multiplier. That makes it trivial to unit test -
+    no clock to fake, no round to set up - and safe to call from a paint loop.
+
+    The second is the guard on negative time. Clocks hand you odd deltas around a
+    round boundary, and a negative one should not mean negative winnings. A round
+    pays from 1.00x upwards, so anything before the start simply \e is the start.
+
+    The growth rate is a property rather than a constant, so it can be tuned from
+    QML while the game runs. At the default of 0.1 per second the multiplier
+    doubles roughly every seven seconds, which is a pace players can feel.
+
+    \section1 Letting QML See the Core
+
+    The curve is a \c QObject with a \c Q_PROPERTY and a \c Q_INVOKABLE method,
+    which is all QML needs. It just has to be told the type exists:
+
+    \snippet main.cpp register-core-types
+
+    Three of the four types are registered as creatable, so QML can write
+    \c {CrashCurve {}} and get one. The round engine is not: it needs a curve and
+    a wallet to mean anything, and a half-built engine conjured out of QML would
+    be a bug waiting to happen. Registering it as uncreatable still exposes its
+    states and properties to QML, which is exactly what the UI needs, while
+    refusing to instantiate it.
+
+    Build and run, and the window comes up with the multiplier the curve reports
+    at ten seconds printed in it. It is not a game yet - nothing moves and there
+    is nothing to press - but the two halves of the app are connected, and every
+    chapter from here on adds to a running program.
 
     \include includes/chapters.qdocinc chapters
 */

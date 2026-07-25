@@ -10,6 +10,7 @@
 
 namespace {
 
+//! [register-core-types]
 void registerCoreTypes()
 {
     const char *uri = "Ascent";
@@ -24,6 +25,7 @@ void registerCoreTypes()
                                             QStringLiteral("RoundEngine is created by the game, "
                                                            "not by QML"));
 }
+//! [register-core-types]
 
 } // namespace
 

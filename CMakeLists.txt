@@ -6,6 +6,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#! [felgo-project]
 find_package(Felgo REQUIRED)
 
 set(PRODUCT_IDENTIFIER "com.merdak.ascent")
@@ -16,6 +17,7 @@ set(PRODUCT_LICENSE_KEY "")
 
 set(FELGO_PLUGINS
 )
+#! [felgo-project]
 
 # QML/JS files are handed to the QML compiler, everything else ships as a resource.
 file(GLOB_RECURSE QmlFiles RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} qml/*.qml qml/*.js)
