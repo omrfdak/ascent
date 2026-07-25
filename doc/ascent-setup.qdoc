@@ -25,26 +25,67 @@
     \c PRODUCT_STAGE stays at \c test until the very end, when switching it to
     \c publish is part of preparing a release build.
 
-    \section1 The Game Window and the Scene
+    \section1 The Game Window and the Scenes
 
-    A Felgo game starts with a \c GameWindow containing at least one \c Scene:
+    A Felgo game starts with a \c GameWindow holding one or more scenes:
 
     \snippet qml/AscentMain.qml game-window
 
-    Those two types are doing more than they look like. \c GameWindow is the
-    application window, and \c screenWidth and \c screenHeight only decide how
-    big it opens on a desktop - on a phone it fills the screen instead.
+    \c GameWindow is the application window, and \c screenWidth and
+    \c screenHeight only decide how big it opens on a desktop - on a phone it
+    fills the screen instead.
 
     \c Scene is where resolution independence happens. You give it a logical size
-    once, here 320 by 480, and then position everything inside it in those
-    coordinates forever. Felgo scales the scene to whatever display it lands on
-    and letterboxes the remainder. That is why the background rectangle is
-    anchored to \c fullWindowAnchorItem rather than to the scene: the scene is
-    the play area, but the window may be taller or wider than it, and without
-    that anchor the letterbox bars would show through as grey.
+    once and then position everything inside it in those coordinates forever;
+    Felgo scales the scene to whatever display it lands on and letterboxes the
+    remainder. Here that size is given once, in a \c SceneBase every scene
+    inherits, rather than repeated per scene:
 
-    Portrait, by the way, is not an arbitrary choice. The balloon rises, so
-    vertical space is the playfield - and it is the right shape for a phone.
+    \code
+    Scene {
+      id: root
+
+      width: 320
+      height: 600
+
+      opacity: 0
+      visible: opacity > 0
+      enabled: visible
+    }
+    \endcode
+
+    Portrait, because the balloon rises - and it is the right shape for a phone.
+    Taller than the window's own ratio on purpose: the extra logical height is
+    room the layout can hand to the balloon, and it costs nothing, because the
+    scene is scaled rather than cropped.
+
+    The last two lines of that base are the ones worth copying. A hidden scene is
+    invisible, and in Qt an invisible item is still \e enabled - its buttons keep
+    taking taps. Tying \c enabled to \c visible is what stops the menu being
+    pressable through the game.
+
+    The sky is anchored to \c fullWindowAnchorItem rather than to the scene. The
+    scene is the play area, but the window may be taller or wider than it, and
+    without that anchor the letterbox bars would show through as black.
+
+    \section1 Switching Scenes
+
+    Which scene is on screen is one property on the window:
+
+    \snippet qml/AscentMain.qml scene-states
+
+    A state names a scene and makes it visible; the state machine reverses the
+    change on the way out, so nothing has to remember to hide the scene it left.
+    \c activeScene moves with it, which is what gives the visible scene the key
+    focus.
+
+    Scenes do not name their successor. Each one emits \c backRequested and the
+    window decides where that goes, so a scene can be opened from anywhere
+    without knowing what it will be returning to.
+
+    The game opens on the game rather than on the menu. Rounds cycle whether
+    anyone is watching, so a title screen between the player and the next round
+    would be a door with nothing behind it.
 
     \section1 From Elapsed Time to a Multiplier
 
