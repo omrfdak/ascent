@@ -38,6 +38,9 @@ GameWindow {
     }
   }
 
-  Component.onCompleted: Rounds.start()
+  // Not Component.onCompleted: on a free license the splash screen sits on top
+  // for a few seconds, and rounds cycling behind it would mean the player walks
+  // in on a bet they never had the chance to place.
+  onSplashScreenFinished: Rounds.start()
 }
 //! [game-window]

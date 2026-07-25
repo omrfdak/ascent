@@ -42,6 +42,11 @@ QString LocalRoundSource::commitment() const
   return m_commitment;
 }
 
+int LocalRoundSource::bettingMsRemaining() const
+{
+  return m_bettingMsRemaining;
+}
+
 int LocalRoundSource::bettingWindowMs() const
 {
   return m_bettingWindowMs;
@@ -82,6 +87,16 @@ void LocalRoundSource::stop()
 {
   m_clockTimer.stop();
   m_windowTimer.stop();
+  setBettingMsRemaining(0);
+}
+
+void LocalRoundSource::setBettingMsRemaining(int bettingMsRemaining)
+{
+  if (m_bettingMsRemaining == bettingMsRemaining)
+    return;
+
+  m_bettingMsRemaining = bettingMsRemaining;
+  emit bettingMsRemainingChanged();
 }
 
 void LocalRoundSource::requestBet(qreal amount)
@@ -111,6 +126,12 @@ void LocalRoundSource::openBetting()
 
   emit bettingOpened(m_commitment, m_bettingWindowMs);
 
+  // The countdown is read off the same clock that ends the window, so what the
+  // player is counting down to is the moment the round actually starts.
+  setBettingMsRemaining(m_bettingWindowMs);
+  m_phaseClock.start();
+  m_clockTimer.start();
+
   m_windowTimer.disconnect();
   connect(&m_windowTimer, &QTimer::timeout, this, &LocalRoundSource::beginRound);
   m_windowTimer.start(m_bettingWindowMs);
@@ -122,7 +143,9 @@ void LocalRoundSource::beginRound()
   if (!m_engine->startRound(m_fair->crashPointFor(m_seed)))
     return;
 
-  m_roundClock.start();
+  setBettingMsRemaining(0);
+
+  m_phaseClock.start();
   m_clockTimer.start();
 
   emit roundStarted();
@@ -130,7 +153,12 @@ void LocalRoundSource::beginRound()
 
 void LocalRoundSource::tick()
 {
-  m_engine->advanceTo(m_roundClock.elapsed());
+  if (m_engine->state() == RoundEngine::Betting) {
+    setBettingMsRemaining(qMax(0, m_bettingWindowMs - static_cast<int>(m_phaseClock.elapsed())));
+    return;
+  }
+
+  m_engine->advanceTo(m_phaseClock.elapsed());
 
   if (m_engine->state() != RoundEngine::Crashed)
     return;

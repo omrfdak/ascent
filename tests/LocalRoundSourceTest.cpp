@@ -17,6 +17,7 @@ private slots:
 
   void signalsArriveInTheRightOrder();
   void roundLastsAsLongAsTheCrashPointNeeds();
+  void bettingWindowCountsDownToTheStart();
   void revealedSeedMatchesThePublishedCommitment();
   void betsAreAnsweredEitherWay();
   void cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash();
@@ -88,6 +89,27 @@ void LocalRoundSourceTest::roundLastsAsLongAsTheCrashPointNeeds()
                         .arg(crashPoint)
                         .arg(expectedMs)
                         .arg(measuredMs)));
+}
+
+void LocalRoundSourceTest::bettingWindowCountsDownToTheStart()
+{
+  m_source->setBettingWindowMs(400);
+
+  QSignalSpy started(m_source.get(), &RoundSource::roundStarted);
+  m_source->start();
+
+  QCOMPARE(m_source->bettingMsRemaining(), 400);
+
+  QTest::qWait(200);
+  const int halfway = m_source->bettingMsRemaining();
+  QVERIFY2(halfway > 100 && halfway < 300,
+           qPrintable(QStringLiteral("halfway through the window it read %1 ms").arg(halfway)));
+
+  QVERIFY(started.wait(2000));
+
+  // The countdown ends because the round starts, not the other way round.
+  QCOMPARE(m_source->bettingMsRemaining(), 0);
+  QCOMPARE(m_source->engine()->state(), RoundEngine::Running);
 }
 
 void LocalRoundSourceTest::revealedSeedMatchesThePublishedCommitment()

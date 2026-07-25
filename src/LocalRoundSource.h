@@ -30,6 +30,7 @@ class LocalRoundSource : public RoundSource
   Q_PROPERTY(RoundEngine *engine READ engine CONSTANT)
   Q_PROPERTY(CrashCurve *curve READ curve CONSTANT)
   Q_PROPERTY(QString commitment READ commitment NOTIFY commitmentChanged)
+  Q_PROPERTY(int bettingMsRemaining READ bettingMsRemaining NOTIFY bettingMsRemainingChanged)
   Q_PROPERTY(int bettingWindowMs READ bettingWindowMs WRITE setBettingWindowMs
              NOTIFY bettingWindowMsChanged)
   Q_PROPERTY(int resultWindowMs READ resultWindowMs WRITE setResultWindowMs
@@ -42,6 +43,8 @@ public:
   CrashCurve *curve() const;
 
   QString commitment() const;
+
+  int bettingMsRemaining() const;
 
   int bettingWindowMs() const;
   void setBettingWindowMs(int bettingWindowMs);
@@ -57,6 +60,7 @@ public:
 
 signals:
   void commitmentChanged();
+  void bettingMsRemainingChanged();
   void bettingWindowMsChanged();
   void resultWindowMsChanged();
 
@@ -64,6 +68,7 @@ private:
   void openBetting();
   void beginRound();
   void tick();
+  void setBettingMsRemaining(int bettingMsRemaining);
 
   CrashCurve *m_curve;
   ProvablyFair *m_fair;
@@ -71,11 +76,12 @@ private:
 
   QTimer m_clockTimer;
   QTimer m_windowTimer;
-  QElapsedTimer m_roundClock;
+  QElapsedTimer m_phaseClock;
 
   QString m_seed;
   QString m_commitment;
 
+  int m_bettingMsRemaining = 0;
   int m_bettingWindowMs = 5000;
   int m_resultWindowMs = 3000;
 };

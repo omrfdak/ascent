@@ -111,7 +111,7 @@ Item {
     readonly property string stateText: {
       switch (Rounds.engine.state) {
       case RoundEngine.Betting:
-        return qsTr("next round starting")
+        return qsTr("next round in %1s").arg((Rounds.bettingMsRemaining / 1000).toFixed(1))
       case RoundEngine.Running:
         return qsTr("cash out before it pops")
       default:
