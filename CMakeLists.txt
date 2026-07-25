@@ -24,6 +24,8 @@ if(AssetsFiles AND QmlFiles)
   list(REMOVE_ITEM AssetsFiles ${QmlFiles})
 endif()
 
+add_subdirectory(src)
+
 qt_add_executable(appAscent
     main.cpp
     ${QmlFiles}
@@ -49,7 +51,7 @@ qt_add_qml_module(appAscent
 target_compile_definitions(appAscent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
-target_link_libraries(appAscent PRIVATE Felgo)
+target_link_libraries(appAscent PRIVATE AscentCore Felgo)
 
 # The tutorial is generated on demand: cmake --build . --target docs
 # It is kept out of the default build so a documentation warning cannot break a

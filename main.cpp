@@ -3,6 +3,30 @@
 
 #include <QQmlApplicationEngine>
 
+#include "CrashCurve.h"
+#include "ProvablyFair.h"
+#include "RoundEngine.h"
+#include "Wallet.h"
+
+namespace {
+
+void registerCoreTypes()
+{
+    const char *uri = "Ascent";
+
+    qmlRegisterType<CrashCurve>(uri, 1, 0, "CrashCurve");
+    qmlRegisterType<ProvablyFair>(uri, 1, 0, "ProvablyFair");
+    qmlRegisterType<Wallet>(uri, 1, 0, "Wallet");
+
+    // The engine needs a curve and a wallet to mean anything, so QML gets to use
+    // its states and read its properties, but not to conjure one out of nothing.
+    qmlRegisterUncreatableType<RoundEngine>(uri, 1, 0, "RoundEngine",
+                                            QStringLiteral("RoundEngine is created by the game, "
+                                                           "not by QML"));
+}
+
+} // namespace
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -11,6 +35,8 @@ int main(int argc, char *argv[])
 
     // Felgo's own font, so the game looks the same on macOS and iOS.
     felgo.setPreservePlatformFonts(false);
+
+    registerCoreTypes();
 
     QQmlApplicationEngine engine;
     felgo.initialize(&engine);
