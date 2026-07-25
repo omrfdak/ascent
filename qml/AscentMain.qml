@@ -24,11 +24,10 @@ GameWindow {
 
     // Fills the whole window, not just the scene, so no letterbox bars show
     // through on a wider display.
-    Rectangle {
+    SkyBackground {
       id: background
 
       anchors.fill: scene.fullWindowAnchorItem
-      color: Qt.rgba(0.043, 0.063, 0.149, 1)
     }
 
     GameScene {
