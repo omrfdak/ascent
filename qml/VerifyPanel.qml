@@ -13,21 +13,7 @@ import Ascent
 Item {
   id: root
 
-  MouseArea {
-    id: dismissArea
-
-    anchors.fill: parent
-    onClicked: root.visible = false
-  }
-
-  Rectangle {
-    id: backdrop
-
-    anchors.fill: parent
-    color: Style.scrim
-    z: -1
-  }
-
+  // The card only; the dim and the tap that dismisses it belong to the scene.
   Rectangle {
     id: card
 

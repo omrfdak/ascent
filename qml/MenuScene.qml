@@ -89,6 +89,35 @@ SceneBase {
     }
   }
 
+  // The dim behind both panels. It is out here rather than inside them because
+  // it covers the whole screen and they deliberately do not: the scene is
+  // letterboxed on any display that is not its shape, and a dim stopping at the
+  // scene edge leaves lit bars of sky around a panel that is meant to be the
+  // only thing on screen.
+  //
+  // A tap anywhere on it closes what is open. Taps on a card land on the card's
+  // own handler instead, because the panels are above this.
+  Rectangle {
+    id: scrim
+
+    anchors.fill: root.fullWindowAnchorItem
+    color: Style.scrim
+    visible: statsPanel.visible || verifyPanel.visible
+
+    MouseArea {
+      id: dismissArea
+
+      anchors.fill: parent
+      onClicked: {
+        statsPanel.visible = false
+        verifyPanel.visible = false
+      }
+    }
+  }
+
+  // Filling the scene and not the window is what keeps the cards clear of the
+  // notch and the home indicator: Felgo has already fitted the scene into the
+  // part of the screen the device is not using for itself.
   StatsPanel {
     id: statsPanel
 

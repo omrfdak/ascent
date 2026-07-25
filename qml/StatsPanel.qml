@@ -15,23 +15,8 @@ import Ascent
 Item {
   id: root
 
-  // Swallows taps so the game underneath cannot be played through the panel,
-  // and closes when the player taps away from the card.
-  MouseArea {
-    id: dismissArea
-
-    anchors.fill: parent
-    onClicked: root.visible = false
-  }
-
-  Rectangle {
-    id: backdrop
-
-    anchors.fill: parent
-    color: Style.scrim
-    z: -1
-  }
-
+  // The card only. The dim behind it, and the tap that dismisses it, belong to
+  // the scene: they cover the whole screen, and this fills the scene.
   Rectangle {
     id: card
 

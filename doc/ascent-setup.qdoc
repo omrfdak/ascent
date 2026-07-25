@@ -68,6 +68,14 @@
     scene is the play area, but the window may be taller or wider than it, and
     without that anchor the letterbox bars would show through as black.
 
+    That anchor is also the whole of this game's answer to notches and home
+    indicators. \c Scene fits itself into the safe area of the screen by default,
+    so anything laid out in scene coordinates is already clear of them, and
+    \c fullWindowAnchorItem is the way to opt back out. Two things opt out here:
+    the sky, and the dim behind the menu's panels - a dim that stopped at the
+    scene edge would leave lit bars of sky around a panel meant to be the only
+    thing on screen.
+
     \section1 Switching Scenes
 
     Which scene is on screen is one property on the window:

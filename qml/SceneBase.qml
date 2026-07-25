@@ -33,7 +33,11 @@ Scene {
   enabled: visible
 
   // Anchored to the window rather than to the scene: on a wider display the
-  // scene is letterboxed, and the sky is what fills the bars.
+  // scene is letterboxed, and the sky is what fills the bars. On a phone with a
+  // notch those bars include the strip around it, because Felgo fits the scene
+  // into the safe area and leaves the rest of the screen to whoever asks for it.
+  // The sky asks. Everything else in the game stays inside the scene, which is
+  // why nothing has to know what shape the top of the screen is.
   SkyBackground {
     id: sky
 
