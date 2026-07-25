@@ -19,6 +19,13 @@ Item {
     riseProgress: _.riseProgress
   }
 
+  CrashBurst {
+    id: crashBurst
+
+    x: balloon.x + balloon.width / 2
+    y: balloon.y + balloon.width / 2
+  }
+
   Column {
     id: readout
 
@@ -152,6 +159,10 @@ Item {
       // Now that the round is over the seed proves the hash that was on screen
       // before it started - the player can check it without leaving the game.
       _.revealedSeed = revealedSeed
+
+      // Fired from wherever the balloon had climbed to, before the binding
+      // pulls it back down for the next round.
+      crashBurst.start()
 
       if (Rounds.engine.bet > 0 && !Rounds.engine.hasCashedOut) {
         _.outcomeText = qsTr("−%1 pts").arg(Rounds.engine.bet.toFixed(2))
