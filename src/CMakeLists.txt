@@ -8,6 +8,7 @@ add_library(AscentCore STATIC
   PlayerStats.cpp
   ProvablyFair.cpp
   RoundEngine.cpp
+  RoundHistory.cpp
   RoundSource.cpp
   Wallet.cpp
 )

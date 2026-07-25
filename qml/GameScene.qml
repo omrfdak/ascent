@@ -83,6 +83,17 @@ Item {
     font.pixelSize: 14
   }
 
+  RecentRoundsStrip {
+    id: recentRounds
+
+    anchors {
+      top: balanceLabel.bottom
+      left: parent.left
+      topMargin: 10
+      leftMargin: 12
+    }
+  }
+
   // Felgo pauses every sound and the music from these two settings and keeps
   // them across runs, so silencing the game is a one line switch. It sits in
   // the corner until the menu arrives to give it a proper home.

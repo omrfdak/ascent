@@ -6,12 +6,14 @@
 #include "LocalRoundSource.h"
 #include "PlayerStats.h"
 #include "RoundEngine.h"
+#include "RoundHistory.h"
 #include "Wallet.h"
 
 namespace {
 
 //! [register-core-types]
-void registerCoreTypes(Wallet *wallet, RoundSource *rounds, PlayerStats *stats)
+void registerCoreTypes(Wallet *wallet, RoundSource *rounds, PlayerStats *stats,
+                       RoundHistory *history)
 {
     const char *uri = "Ascent";
 
@@ -20,6 +22,7 @@ void registerCoreTypes(Wallet *wallet, RoundSource *rounds, PlayerStats *stats)
     qmlRegisterSingletonInstance(uri, 1, 0, "PlayerWallet", wallet);
     qmlRegisterSingletonInstance(uri, 1, 0, "Rounds", rounds);
     qmlRegisterSingletonInstance(uri, 1, 0, "PlayerStats", stats);
+    qmlRegisterSingletonInstance(uri, 1, 0, "RecentRounds", history);
 
     // Not creatable either, but the UI needs the state names to know whether it
     // is drawing a betting window, a climbing multiplier or a wreck.
@@ -43,8 +46,9 @@ int main(int argc, char *argv[])
     Wallet wallet;
     LocalRoundSource rounds(&wallet);
     PlayerStats stats(&rounds);
+    RoundHistory history(&rounds);
 
-    registerCoreTypes(&wallet, &rounds, &stats);
+    registerCoreTypes(&wallet, &rounds, &stats, &history);
 
     QQmlApplicationEngine engine;
     felgo.initialize(&engine);
