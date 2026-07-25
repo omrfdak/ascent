@@ -26,7 +26,8 @@ GridLayout {
     text: qsTr("−")
     // The limits are enforced by the wallet as well; blocking the button is
     // about not offering a move that would only be refused.
-    enabled: _.canChangeStake && _.stake - _.stakeStep >= PlayerWallet.minimumBet
+    enabled: _.canChangeStake
+      && _.stake - _.stakeStep >= PlayerWallet.minimumBet
     onClicked: _.stake -= _.stakeStep
   }
 
@@ -46,7 +47,8 @@ GridLayout {
 
     Layout.preferredWidth: _.stepperWidth
     text: qsTr("+")
-    enabled: _.canChangeStake && _.stake + _.stakeStep <= _.highestAffordableStake
+    enabled: _.canChangeStake
+      && _.stake + _.stakeStep <= _.highestAffordableStake
     onClicked: _.stake += _.stakeStep
   }
 
@@ -56,7 +58,8 @@ GridLayout {
     Layout.preferredWidth: _.stepperWidth
     text: qsTr("−")
     enabled: Rounds.engine.autoCashOutAt >= _.lowestTarget + _.targetStep
-    onClicked: Rounds.engine.autoCashOutAt = Rounds.engine.autoCashOutAt - _.targetStep
+    onClicked: Rounds.engine.autoCashOutAt = Rounds.engine.autoCashOutAt
+      - _.targetStep
   }
 
   Text {
@@ -81,8 +84,8 @@ GridLayout {
     Layout.preferredWidth: _.stepperWidth
     text: qsTr("+")
     enabled: Rounds.engine.autoCashOutAt < _.highestTarget
-    onClicked: Rounds.engine.autoCashOutAt = Math.max(_.lowestTarget,
-                                                      Rounds.engine.autoCashOutAt) + _.targetStep
+    onClicked: Rounds.engine.autoCashOutAt = _.targetStep
+      + Math.max(_.lowestTarget, Rounds.engine.autoCashOutAt)
   }
 
   GameButton {
@@ -104,8 +107,8 @@ GridLayout {
     readonly property int stakeStep: 25
 
     // Never more than the player has, whatever the table maximum says.
-    readonly property int highestAffordableStake: Math.min(PlayerWallet.maximumBet,
-                                                           PlayerWallet.balance)
+    readonly property int highestAffordableStake:
+      Math.min(PlayerWallet.maximumBet, PlayerWallet.balance)
 
     property int stake: PlayerWallet.minimumBet
 
@@ -119,8 +122,12 @@ GridLayout {
 
     readonly property bool isAutoOn: Rounds.engine.autoCashOutAt > 0
 
-    readonly property bool isBettingOpen: Rounds.engine.state === RoundEngine.Betting
-    readonly property bool isRoundRunning: Rounds.engine.state === RoundEngine.Running
+    readonly property bool isBettingOpen:
+      Rounds.engine.state === RoundEngine.Betting
+
+    readonly property bool isRoundRunning:
+      Rounds.engine.state === RoundEngine.Running
+
     readonly property bool hasStakeIn: Rounds.engine.bet > 0
 
     readonly property bool canChangeStake: _.isBettingOpen && !_.hasStakeIn
@@ -138,7 +145,9 @@ GridLayout {
         return qsTr("Cash out %1 pts").arg(_.cashOutValue.toFixed(2))
 
       if (_.isRoundRunning)
-        return Rounds.engine.hasCashedOut ? qsTr("Cashed out") : qsTr("Watching this one")
+        return Rounds.engine.hasCashedOut
+          ? qsTr("Cashed out")
+          : qsTr("Watching this one")
 
       if (_.hasStakeIn)
         return qsTr("%1 pts in").arg(Rounds.engine.bet.toFixed(2))

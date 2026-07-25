@@ -4,6 +4,8 @@
  * once the round is worth something.
  */
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Ascent
 

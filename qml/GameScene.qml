@@ -54,6 +54,22 @@ Item {
         Layout.fillWidth: true
       }
 
+      Text {
+        id: statsToggle
+
+        text: qsTr("stats")
+        color: Qt.rgba(0.561, 0.639, 0.816, 1)
+        font.pixelSize: 14
+
+        MouseArea {
+          anchors {
+            fill: parent
+            margins: -8
+          }
+          onClicked: statsPanel.visible = true
+        }
+      }
+
       // Felgo pauses every sound and the music from these two settings and
       // keeps them across runs, so silencing the game is a one line switch. It
       // sits in the corner until the menu arrives to give it a proper home.
@@ -103,8 +119,10 @@ Item {
 
         text: _.outcomeText
         color: _.outcomeColor
-        font.pixelSize: 16
-        font.bold: true
+        font {
+          pixelSize: 16
+          bold: true
+        }
       }
     }
 
@@ -173,15 +191,26 @@ Item {
     }
   }
 
+  // Outside the layout on purpose: it covers the scene rather than taking a row
+  // in it. It moves into the menu once there is a menu to put it in.
+  StatsPanel {
+    id: statsPanel
+
+    anchors.fill: parent
+    visible: false
+  }
+
   QtObject {
     id: _
 
     // The multiplier has no ceiling but the lane does. Reading the height off
-    // the logarithm means every scale gets its own stretch of sky: 2x is a third
-    // of the way up, 10x two thirds, 1000x still climbing. A balloon pinned to
+    // the logarithm means every scale gets its own stretch of sky: 2x is a
+    // third of the way up, 10x two thirds, 1000x still climbing. A balloon
+    // pinned to
     // the top while the number keeps running would be a dead screen at exactly
     // the moment the round is worth watching.
-    readonly property real riseProgress: 1 - 1 / (1 + 0.9 * Math.log(Rounds.engine.multiplier))
+    readonly property real riseProgress: 1
+      - 1 / (1 + 0.9 * Math.log(Rounds.engine.multiplier))
 
     readonly property color climbingColor: Qt.rgba(0.55, 0.95, 0.65, 1)
     readonly property color crashedColor: Qt.rgba(0.95, 0.35, 0.4, 1)
@@ -190,7 +219,8 @@ Item {
     readonly property string stateText: {
       switch (Rounds.engine.state) {
       case RoundEngine.Betting:
-        return qsTr("next round in %1s").arg((Rounds.bettingMsRemaining / 1000).toFixed(1))
+        return qsTr("next round in %1s")
+          .arg((Rounds.bettingMsRemaining / 1000).toFixed(1))
       case RoundEngine.Running:
         return qsTr("cash out before it pops")
       default:
@@ -209,7 +239,8 @@ Item {
     target: Rounds
 
     function onCashOutConfirmed(payout, multiplier) {
-      _.outcomeText = qsTr("+%1 pts at %2x").arg(payout.toFixed(2)).arg(multiplier.toFixed(2))
+      _.outcomeText = qsTr("+%1 pts at %2x")
+        .arg(payout.toFixed(2)).arg(multiplier.toFixed(2))
       _.outcomeColor = _.climbingColor
     }
 

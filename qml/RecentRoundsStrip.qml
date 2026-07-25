@@ -4,6 +4,8 @@
  * when deciding whether to sit the next round out.
  */
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Ascent
 
@@ -18,6 +20,8 @@ Row {
     Rectangle {
       id: chip
 
+      // One recorded round: multiplier, commitment and revealed seed. It stays
+      // variant because it crosses from C++ as a plain map.
       required property var modelData
 
       width: label.implicitWidth + 12

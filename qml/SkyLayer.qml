@@ -4,6 +4,8 @@
  * covering the layer - no seam and no gap at the edges.
  */
 
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
 Item {
