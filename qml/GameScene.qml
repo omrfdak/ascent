@@ -51,7 +51,7 @@ Item {
       left: parent.left
       margins: 12
     }
-    text: qsTr("%1 pts").arg(PlayerWallet.balance)
+    text: qsTr("%1 pts").arg(PlayerWallet.balance.toFixed(2))
     color: Qt.rgba(0.561, 0.639, 0.816, 1)
     font.pixelSize: 14
   }

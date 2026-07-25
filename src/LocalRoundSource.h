@@ -52,7 +52,7 @@ public:
   void start() override;
   void stop() override;
 
-  void requestBet(qint64 amount) override;
+  void requestBet(qreal amount) override;
   void requestCashOut() override;
 
 signals:

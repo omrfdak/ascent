@@ -4,65 +4,75 @@
 
 namespace {
 
-constexpr qint64 MinimumBet = 25;
-constexpr qint64 MaximumBet = 2500;
+constexpr qreal MinimumBet = 25.0;
+constexpr qreal MaximumBet = 2500.0;
 
 // Enough to get back to the table without making a loss meaningless.
-constexpr qint64 BailoutBalance = 500;
+constexpr qreal BailoutBalance = 500.0;
+
+// Points are only ever worth two decimals. Snapping to them here is what keeps
+// a balance equal to the number on screen instead of a hair away from it.
+//
+// The nudge is not cosmetic: 25.655 * 100 is 2565.4999999999995 in binary, so
+// rounding it directly would give 25.65 and quietly break the halfway rule.
+qreal toPoints(qreal amount)
+{
+  constexpr qreal HalfwayNudge = 1e-9;
+
+  return qRound(amount * 100.0 + HalfwayNudge) / 100.0;
+}
 
 } // namespace
 
-Wallet::Wallet(qint64 startingBalance, QObject *parent)
+Wallet::Wallet(qreal startingBalance, QObject *parent)
   : QObject(parent)
-  , m_balance(startingBalance)
+  , m_balance(toPoints(startingBalance))
 {
 }
 
-qint64 Wallet::balance() const
+qreal Wallet::balance() const
 {
   return m_balance;
 }
 
-qint64 Wallet::minimumBet() const
+qreal Wallet::minimumBet() const
 {
   return MinimumBet;
 }
 
-qint64 Wallet::maximumBet() const
+qreal Wallet::maximumBet() const
 {
   return MaximumBet;
 }
 
-bool Wallet::canPlaceBet(qint64 bet) const
+bool Wallet::canPlaceBet(qreal bet) const
 {
   return bet >= MinimumBet && bet <= MaximumBet && bet <= m_balance;
 }
 
-bool Wallet::placeBet(qint64 bet)
+bool Wallet::placeBet(qreal bet)
 {
   if (!canPlaceBet(bet))
     return false;
 
-  m_balance -= bet;
+  m_balance = toPoints(m_balance - bet);
   emit balanceChanged();
 
   return true;
 }
 
 //! [pay-out]
-qint64 Wallet::payOut(qint64 bet, qreal multiplier)
+qreal Wallet::payOut(qreal bet, qreal multiplier)
 {
-  if (bet <= 0 || multiplier < 1.0)
-    return 0;
+  if (bet <= 0.0 || multiplier < 1.0)
+    return 0.0;
 
-  // The multiplier is shown with two decimals, so two decimals is all it is
-  // worth. Turning it into hundredths here means the payout is decided by
-  // integer arithmetic - the same bet at the same multiplier always pays the
-  // same number of points, on every platform.
-  const qint64 hundredths = qRound64(multiplier * 100.0);
-  const qint64 payout = bet * hundredths / 100;
+  // Rounded to the nearest hundredth rather than cut off: truncating would take
+  // half a point from the player on an average round, which is a bigger cut than
+  // the house edge the game openly charges.
+  const qreal payout = toPoints(bet * multiplier);
 
-  m_balance += payout;
+  m_balance = toPoints(m_balance + payout);
   emit balanceChanged();
 
   return payout;

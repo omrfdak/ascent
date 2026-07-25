@@ -41,7 +41,7 @@ void RoundEngineTest::startsInTheBettingState()
 {
   QCOMPARE(m_engine->state(), RoundEngine::Betting);
   QCOMPARE(m_engine->multiplier(), 1.0);
-  QCOMPARE(m_engine->bet(), 0);
+  QCOMPARE(m_engine->bet(), 0.0);
 }
 
 void RoundEngineTest::runsAFullRoundInOrder()
@@ -71,8 +71,8 @@ void RoundEngineTest::refusesABetOnceTheRoundIsRunning()
 
   // Betting here would mean betting on a multiplier already on screen.
   QVERIFY(!m_engine->placeBet(100));
-  QCOMPARE(m_engine->bet(), 0);
-  QCOMPARE(m_wallet->balance(), 1000);
+  QCOMPARE(m_engine->bet(), 0.0);
+  QCOMPARE(m_wallet->balance(), 1000.0);
 }
 
 void RoundEngineTest::refusesASecondBetInTheSameRound()
@@ -80,8 +80,8 @@ void RoundEngineTest::refusesASecondBetInTheSameRound()
   QVERIFY(m_engine->placeBet(100));
   QVERIFY(!m_engine->placeBet(100));
 
-  QCOMPARE(m_engine->bet(), 100);
-  QCOMPARE(m_wallet->balance(), 900); // the refused bet never left the wallet
+  QCOMPARE(m_engine->bet(), 100.0);
+  QCOMPARE(m_wallet->balance(), 900.0); // the refused bet never left the wallet
 }
 
 void RoundEngineTest::refusesToStartARoundThatIsAlreadyRunning()
@@ -115,7 +115,7 @@ void RoundEngineTest::refusesCashOutAfterTheCrash()
   QVERIFY(m_engine->advanceTo(20000));
 
   QVERIFY(!m_engine->cashOut());
-  QCOMPARE(m_wallet->balance(), 900); // the bet stays lost
+  QCOMPARE(m_wallet->balance(), 900.0); // the bet stays lost
 }
 
 void RoundEngineTest::refusesASecondCashOut()
@@ -125,7 +125,7 @@ void RoundEngineTest::refusesASecondCashOut()
   QVERIFY(m_engine->advanceTo(6931)); // 2.00x
 
   QVERIFY(m_engine->cashOut());
-  const qint64 afterFirst = m_wallet->balance();
+  const qreal afterFirst = m_wallet->balance();
 
   QVERIFY(!m_engine->cashOut());
   QCOMPARE(m_wallet->balance(), afterFirst);
@@ -138,7 +138,7 @@ void RoundEngineTest::refusesCashOutWithoutABet()
 
   // Watching a round is allowed, being paid for watching is not.
   QVERIFY(!m_engine->cashOut());
-  QCOMPARE(m_wallet->balance(), 1000);
+  QCOMPARE(m_wallet->balance(), 1000.0);
 }
 
 void RoundEngineTest::paysTheMultiplierThatWasOnScreen()
@@ -155,14 +155,14 @@ void RoundEngineTest::paysTheMultiplierThatWasOnScreen()
   QVERIFY(m_engine->cashOut());
 
   QCOMPARE(spy.count(), 1);
-  const qint64 payout = spy.first().at(0).toLongLong();
+  const qreal payout = spy.first().at(0).toReal();
   const qreal multiplier = spy.first().at(1).toReal();
 
   // Whatever the curve was really at, the payout follows the two decimals the
   // player could read - here 100 points at 2.00x.
   QCOMPARE(multiplier, m_engine->multiplier());
-  QCOMPARE(payout, 200);
-  QCOMPARE(m_wallet->balance(), 1100);
+  QCOMPARE(payout, 200.0);
+  QCOMPARE(m_wallet->balance(), 1100.0);
 }
 
 void RoundEngineTest::losesTheBetWhenThePlayerWaitsTooLong()
@@ -175,7 +175,7 @@ void RoundEngineTest::losesTheBetWhenThePlayerWaitsTooLong()
 
   QCOMPARE(spy.count(), 1);
   QCOMPARE(spy.first().at(0).toReal(), 3.0);
-  QCOMPARE(m_wallet->balance(), 750);
+  QCOMPARE(m_wallet->balance(), 750.0);
 }
 
 void RoundEngineTest::clearsTheBetWhenTheNextRoundOpens()
@@ -186,7 +186,7 @@ void RoundEngineTest::clearsTheBetWhenTheNextRoundOpens()
   QVERIFY(m_engine->settle());
   QVERIFY(m_engine->openBetting());
 
-  QCOMPARE(m_engine->bet(), 0);
+  QCOMPARE(m_engine->bet(), 0.0);
   QCOMPARE(m_engine->multiplier(), 1.0);
 
   // And the next round is a clean slate, not a continuation of the last one.

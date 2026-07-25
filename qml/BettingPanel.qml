@@ -84,13 +84,13 @@ Column {
 
     readonly property string actionText: {
       if (_.canCashOut)
-        return qsTr("Cash out %1 pts").arg(_.cashOutValue)
+        return qsTr("Cash out %1 pts").arg(_.cashOutValue.toFixed(2))
 
       if (_.isRoundRunning)
         return Rounds.engine.hasCashedOut ? qsTr("Cashed out") : qsTr("Watching this one")
 
       if (_.hasStakeIn)
-        return qsTr("%1 pts in").arg(Rounds.engine.bet)
+        return qsTr("%1 pts in").arg(Rounds.engine.bet.toFixed(2))
 
       return _.stake <= _.highestAffordableStake
         ? qsTr("Bet %1 pts").arg(_.stake)
@@ -98,8 +98,8 @@ Column {
     }
 
     // What the button pays right now, worked out the same way the wallet will.
-    readonly property int cashOutValue: Math.floor(Rounds.engine.bet
-      * Math.round(Rounds.engine.multiplier * 100) / 100)
+    readonly property real cashOutValue: Math.round(Rounds.engine.bet
+      * Rounds.engine.multiplier * 100) / 100
 
     function act(): void {
       if (_.canCashOut) {

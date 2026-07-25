@@ -119,12 +119,12 @@ void LocalRoundSourceTest::betsAreAnsweredEitherWay()
 
   m_source->requestBet(100);
   QCOMPARE(accepted.count(), 1);
-  QCOMPARE(m_wallet->balance(), 900);
+  QCOMPARE(m_wallet->balance(), 900.0);
 
   // Below the minimum: refused, and answered rather than silently dropped.
   m_source->requestBet(5);
   QCOMPARE(rejected.count(), 1);
-  QCOMPARE(m_wallet->balance(), 900);
+  QCOMPARE(m_wallet->balance(), 900.0);
 }
 
 void LocalRoundSourceTest::cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash()
@@ -140,7 +140,7 @@ void LocalRoundSourceTest::cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash
 
   m_source->requestCashOut();
   QCOMPARE(confirmed.count(), 1);
-  QVERIFY(confirmed.first().at(0).toLongLong() >= 100);
+  QVERIFY(confirmed.first().at(0).toReal() >= 100.0);
 
   QSignalSpy crashes(m_source.get(), &RoundSource::roundCrashed);
   QVERIFY(crashes.wait(10000));

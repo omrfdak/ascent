@@ -25,7 +25,7 @@ public:
   Q_INVOKABLE virtual void start() = 0;
   Q_INVOKABLE virtual void stop() = 0;
 
-  Q_INVOKABLE virtual void requestBet(qint64 amount) = 0;
+  Q_INVOKABLE virtual void requestBet(qreal amount) = 0;
   Q_INVOKABLE virtual void requestCashOut() = 0;
 
 signals:
@@ -37,10 +37,10 @@ signals:
   // The seed behind the commitment, revealed now that it cannot be abused.
   void roundCrashed(qreal crashPoint, const QString &revealedSeed);
 
-  void betAccepted(qint64 amount);
-  void betRejected(qint64 amount);
+  void betAccepted(qreal amount);
+  void betRejected(qreal amount);
 
-  void cashOutConfirmed(qint64 payout, qreal multiplier);
+  void cashOutConfirmed(qreal payout, qreal multiplier);
   void cashOutRejected();
 };
 

@@ -14,6 +14,7 @@ private slots:
   void payOutIsTheBetTimesTheMultiplier();
   void cashingOutImmediatelyReturnsTheBet();
   void repeatedRoundsDoNotDriftAPoint();
+  void roundsHalfwayAmountsUp();
   void payOutRefusesAnImpossibleRound();
   void bailOutOnlyRescuesABrokePlayer();
 };
@@ -22,9 +23,9 @@ void WalletTest::startsWithTheGivenBalance()
 {
   const Wallet wallet(1000);
 
-  QCOMPARE(wallet.balance(), 1000);
-  QCOMPARE(wallet.minimumBet(), 25);
-  QCOMPARE(wallet.maximumBet(), 2500);
+  QCOMPARE(wallet.balance(), 1000.0);
+  QCOMPARE(wallet.minimumBet(), 25.0);
+  QCOMPARE(wallet.maximumBet(), 2500.0);
 }
 
 void WalletTest::rejectsBetsOutsideTheLimits()
@@ -47,11 +48,11 @@ void WalletTest::rejectsABetTheBalanceCannotCover()
 
   QVERIFY(!wallet.canPlaceBet(101));
   QVERIFY(!wallet.placeBet(101));
-  QCOMPARE(wallet.balance(), 100); // a refused bet must not touch the balance
+  QCOMPARE(wallet.balance(), 100.0); // a refused bet must not touch the balance
 
   // Betting everything is fine, betting a point more is not.
   QVERIFY(wallet.placeBet(100));
-  QCOMPARE(wallet.balance(), 0);
+  QCOMPARE(wallet.balance(), 0.0);
 }
 
 void WalletTest::placingABetTakesExactlyTheBet()
@@ -61,7 +62,7 @@ void WalletTest::placingABetTakesExactlyTheBet()
 
   QVERIFY(wallet.placeBet(250));
 
-  QCOMPARE(wallet.balance(), 750);
+  QCOMPARE(wallet.balance(), 750.0);
   QCOMPARE(spy.count(), 1);
 }
 
@@ -70,14 +71,13 @@ void WalletTest::payOutIsTheBetTimesTheMultiplier()
   Wallet wallet(1000);
 
   QVERIFY(wallet.placeBet(100));
-  QCOMPARE(wallet.payOut(100, 2.37), 237);
-  QCOMPARE(wallet.balance(), 1137);
+  QCOMPARE(wallet.payOut(100, 2.37), 237.0);
+  QCOMPARE(wallet.balance(), 1137.0);
 
-  // A payout that does not divide evenly is truncated, never rounded up: the
-  // player can never be credited a point the multiplier did not earn.
+  // Fractions survive: a multiplier has two decimals, so a payout does too.
   Wallet other(1000);
-  QCOMPARE(other.payOut(25, 1.03), 25); // 25 * 1.03 = 25.75
-  QCOMPARE(other.payOut(33, 1.51), 49); // 33 * 1.51 = 49.83
+  QCOMPARE(other.payOut(25, 1.13), 28.25);
+  QCOMPARE(other.payOut(33, 1.51), 49.83);
 }
 
 void WalletTest::cashingOutImmediatelyReturnsTheBet()
@@ -85,22 +85,34 @@ void WalletTest::cashingOutImmediatelyReturnsTheBet()
   Wallet wallet(1000);
 
   QVERIFY(wallet.placeBet(500));
-  QCOMPARE(wallet.payOut(500, 1.0), 500);
-  QCOMPARE(wallet.balance(), 1000);
+  QCOMPARE(wallet.payOut(500, 1.0), 500.0);
+  QCOMPARE(wallet.balance(), 1000.0);
 }
 
 void WalletTest::repeatedRoundsDoNotDriftAPoint()
 {
   Wallet wallet(1000);
 
-  // Ten thousand rounds that each break even. With a floating point balance the
-  // remainder of 1.07 would quietly accumulate; with whole points it cannot.
+  // Ten thousand rounds whose payouts do not land on whole points. Left to raw
+  // floating point the remainders would pile up and the balance would end on
+  // something like 999.9999999998; snapped to hundredths it cannot.
   for (int i = 0; i < 10000; ++i) {
     QVERIFY(wallet.placeBet(100));
-    wallet.payOut(100, 1.0);
+    wallet.payOut(100, 1.13);
   }
 
-  QCOMPARE(wallet.balance(), 1000);
+  QCOMPARE(wallet.balance(), 1000.0 + 10000 * 13.0);
+}
+
+void WalletTest::roundsHalfwayAmountsUp()
+{
+  Wallet wallet(0);
+
+  // Two decimals, halfway goes up. Worth pinning because 25.655 * 100 is not
+  // 2565.5 in binary but a hair below it, which would round the wrong way.
+  QCOMPARE(wallet.payOut(25.655, 1.0), 25.66);
+  QCOMPARE(wallet.payOut(25.654, 1.0), 25.65);
+  QCOMPARE(wallet.payOut(25.657, 1.0), 25.66);
 }
 
 void WalletTest::payOutRefusesAnImpossibleRound()
@@ -108,21 +120,21 @@ void WalletTest::payOutRefusesAnImpossibleRound()
   Wallet wallet(1000);
 
   // Below 1.00x there is no cash out to pay - the round popped.
-  QCOMPARE(wallet.payOut(100, 0.5), 0);
-  QCOMPARE(wallet.payOut(0, 5.0), 0);
-  QCOMPARE(wallet.payOut(-100, 5.0), 0);
-  QCOMPARE(wallet.balance(), 1000);
+  QCOMPARE(wallet.payOut(100, 0.5), 0.0);
+  QCOMPARE(wallet.payOut(0, 5.0), 0.0);
+  QCOMPARE(wallet.payOut(-100, 5.0), 0.0);
+  QCOMPARE(wallet.balance(), 1000.0);
 }
 
 void WalletTest::bailOutOnlyRescuesABrokePlayer()
 {
   Wallet solvent(25);
   QVERIFY(!solvent.bailOut()); // can still afford the smallest bet
-  QCOMPARE(solvent.balance(), 25);
+  QCOMPARE(solvent.balance(), 25.0);
 
-  Wallet broke(24);
+  Wallet broke(24.99);
   QVERIFY(broke.bailOut());
-  QCOMPARE(broke.balance(), 500);
+  QCOMPARE(broke.balance(), 500.0);
 
   // And it cannot be farmed once the player is back on their feet.
   QVERIFY(!broke.bailOut());

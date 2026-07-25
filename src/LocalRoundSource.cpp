@@ -24,7 +24,7 @@ LocalRoundSource::LocalRoundSource(Wallet *wallet, QObject *parent)
   connect(&m_clockTimer, &QTimer::timeout, this, &LocalRoundSource::tick);
 
   connect(m_engine, &RoundEngine::cashedOut, this,
-          [this](qint64 payout, qreal multiplier) { emit cashOutConfirmed(payout, multiplier); });
+          [this](qreal payout, qreal multiplier) { emit cashOutConfirmed(payout, multiplier); });
 }
 
 RoundEngine *LocalRoundSource::engine() const
@@ -84,7 +84,7 @@ void LocalRoundSource::stop()
   m_windowTimer.stop();
 }
 
-void LocalRoundSource::requestBet(qint64 amount)
+void LocalRoundSource::requestBet(qreal amount)
 {
   if (m_engine->placeBet(amount))
     emit betAccepted(amount);

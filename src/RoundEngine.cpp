@@ -22,7 +22,7 @@ qreal RoundEngine::multiplier() const
   return m_multiplier;
 }
 
-qint64 RoundEngine::bet() const
+qreal RoundEngine::bet() const
 {
   return m_bet;
 }
@@ -37,11 +37,11 @@ bool RoundEngine::hasCashedOut() const
   return m_hasCashedOut;
 }
 
-bool RoundEngine::placeBet(qint64 bet)
+bool RoundEngine::placeBet(qreal bet)
 {
   // Once the balloon is off the ground the round is closed. Letting a bet in
   // here would mean betting on a multiplier the player can already see.
-  if (m_state != Betting || m_bet != 0)
+  if (m_state != Betting || m_bet > 0.0)
     return false;
 
   if (!m_wallet->placeBet(bet))
@@ -98,12 +98,12 @@ bool RoundEngine::advanceTo(qint64 elapsedMs)
 bool RoundEngine::cashOut()
 {
   // Only once, only while the balloon is still up, and only with money in.
-  if (m_state != Running || m_hasCashedOut || m_bet == 0)
+  if (m_state != Running || m_hasCashedOut || m_bet <= 0.0)
     return false;
 
   setHasCashedOut(true);
 
-  const qint64 payout = m_wallet->payOut(m_bet, m_multiplier);
+  const qreal payout = m_wallet->payOut(m_bet, m_multiplier);
   emit cashedOut(payout, m_multiplier);
 
   return true;
@@ -124,7 +124,7 @@ bool RoundEngine::openBetting()
   if (m_state != Settled)
     return false;
 
-  m_bet = 0;
+  m_bet = 0.0;
   setHasCashedOut(false);
   setMultiplier(1.0);
   setState(Betting);

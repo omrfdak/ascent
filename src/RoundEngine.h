@@ -22,7 +22,7 @@ class RoundEngine : public QObject
   Q_OBJECT
   Q_PROPERTY(State state READ state NOTIFY stateChanged)
   Q_PROPERTY(qreal multiplier READ multiplier NOTIFY multiplierChanged)
-  Q_PROPERTY(qint64 bet READ bet NOTIFY betChanged)
+  Q_PROPERTY(qreal bet READ bet NOTIFY betChanged)
   Q_PROPERTY(bool hasCashedOut READ hasCashedOut NOTIFY hasCashedOutChanged)
 
 public:
@@ -38,12 +38,12 @@ public:
 
   State state() const;
   qreal multiplier() const;
-  qint64 bet() const;
+  qreal bet() const;
   qreal crashPoint() const;
   bool hasCashedOut() const;
 
   // Puts the player's bet in for the round that is about to start.
-  Q_INVOKABLE bool placeBet(qint64 bet);
+  Q_INVOKABLE bool placeBet(qreal bet);
 
   // Starts the round at the crash point decided before any bet was seen.
   Q_INVOKABLE bool startRound(qreal crashPoint);
@@ -65,7 +65,7 @@ signals:
   void hasCashedOutChanged();
 
   void roundStarted();
-  void cashedOut(qint64 payout, qreal multiplier);
+  void cashedOut(qreal payout, qreal multiplier);
   void crashed(qreal crashPoint);
 
 private:
@@ -79,7 +79,7 @@ private:
   State m_state = Betting;
   qreal m_multiplier = 1.0;
   qreal m_crashPoint = 1.0;
-  qint64 m_bet = 0;
+  qreal m_bet = 0.0;
   bool m_hasCashedOut = false;
 };
 
