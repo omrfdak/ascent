@@ -14,7 +14,7 @@ private slots:
   void verifyAcceptsAHonestRound();
   void verifyRejectsATamperedSeed();
   void verifyRejectsAWrongCrashPoint();
-  void crashPointNeverPaysLessThanTheBet();
+  void crashPointsAreShapedLikeACrashGame();
   void houseEdgeShavesTheCurve();
 };
 
@@ -100,15 +100,63 @@ void ProvablyFairTest::verifyRejectsAWrongCrashPoint()
   QVERIFY(!fair.verify(seed, commitment, fair.crashPointFor(seed) + 0.5));
 }
 
-void ProvablyFairTest::crashPointNeverPaysLessThanTheBet()
+void ProvablyFairTest::crashPointsAreShapedLikeACrashGame()
 {
   const ProvablyFair fair;
 
-  for (int i = 0; i < 5000; ++i) {
+  constexpr int Rounds = 100000;
+
+  QList<qreal> crashPoints;
+  crashPoints.reserve(Rounds);
+
+  QSet<qreal> distinct;
+  int instantPops = 0;
+
+  for (int i = 0; i < Rounds; ++i) {
     const qreal crashPoint = fair.crashPointFor(QStringLiteral("seed-%1").arg(i));
+
+    // A round paying less than the bet would be a bug no player could survive.
     QVERIFY2(crashPoint >= 1.0,
              qPrintable(QStringLiteral("seed-%1 crashed below 1.00x").arg(i)));
+
+    crashPoints.append(crashPoint);
+    distinct.insert(crashPoint);
+    if (qFuzzyCompare(crashPoint, 1.0))
+      ++instantPops;
   }
+
+  std::sort(crashPoints.begin(), crashPoints.end());
+
+  const qreal median = crashPoints.at(Rounds / 2);
+  const auto share = [&crashPoints](std::function<bool(qreal)> predicate) {
+    return 100.0 * std::count_if(crashPoints.cbegin(), crashPoints.cend(), predicate) / Rounds;
+  };
+
+  // The median, not the average: the tail runs to 10000x, so a handful of huge
+  // rounds drag the average wherever they please. The median is what a player
+  // actually experiences, and it should sit just under 2x.
+  QVERIFY2(median > 1.90 && median < 2.10,
+           qPrintable(QStringLiteral("median crash point was %1").arg(median)));
+
+  // Half the rounds short, a tenth of them long. This is the shape that makes
+  // cashing out at 2x feel like a coin flip.
+  const qreal shortRounds = share([](qreal m) { return m < 2.0; });
+  const qreal longRounds = share([](qreal m) { return m > 10.0; });
+
+  QVERIFY2(shortRounds > 45.0 && shortRounds < 55.0,
+           qPrintable(QStringLiteral("%1% of rounds ended below 2x").arg(shortRounds)));
+  QVERIFY2(longRounds > 7.0 && longRounds < 13.0,
+           qPrintable(QStringLiteral("%1% of rounds passed 10x").arg(longRounds)));
+
+  // The house edge shows up as instant pops rather than as a shaved payout.
+  const qreal instantShare = 100.0 * instantPops / Rounds;
+  QVERIFY2(instantShare > 1.0 && instantShare < 3.0,
+           qPrintable(QStringLiteral("%1% of rounds popped instantly").arg(instantShare)));
+
+  // Guards against the failure mode every statistic above would survive: a
+  // generator that returns the same handful of values over and over.
+  QVERIFY2(distinct.size() > 1000,
+           qPrintable(QStringLiteral("only %1 distinct crash points").arg(distinct.size())));
 }
 
 void ProvablyFairTest::houseEdgeShavesTheCurve()
