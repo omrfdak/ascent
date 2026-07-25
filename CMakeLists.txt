@@ -35,7 +35,7 @@ endif()
 
 add_subdirectory(src)
 
-qt_add_executable(appAscent
+qt_add_executable(Ascent
     main.cpp
     ${QmlFiles}
     ${AssetsFiles}
@@ -43,7 +43,7 @@ qt_add_executable(appAscent
 
 # Picks up macx/app_icon.icns and ios/Assets.xcassets on its own, so the icons
 # are wired up by being where Felgo looks for them.
-felgo_configure_executable(appAscent)
+felgo_configure_executable(Ascent)
 
 if(APPLE AND NOT IOS)
   # Felgo copies the icon into the bundle but names it in a variable of its own
@@ -51,10 +51,10 @@ if(APPLE AND NOT IOS)
   # never looks at it. The property is what ends up in Info.plist.
   #
   # The rest of these are the same story from the other end. Left alone, the
-  # bundle describes itself as "appAscent 0.1" under an identifier taken from the
+  # bundle describes itself as version 0.1 under an identifier taken from the
   # login name, and Launch Services is entitled to distrust a bundle that
   # contradicts what the project says about itself.
-  set_target_properties(appAscent PROPERTIES
+  set_target_properties(Ascent PROPERTIES
     MACOSX_BUNDLE_ICON_FILE app_icon.icns
     MACOSX_BUNDLE_BUNDLE_NAME "Ascent"
     MACOSX_BUNDLE_GUI_IDENTIFIER "${PRODUCT_IDENTIFIER}"
@@ -65,7 +65,7 @@ endif()
 if(IOS)
   # The screen iOS shows before the first frame. Qt writes the plist key for it,
   # which is why the storyboard is named here instead of just being copied in.
-  set_target_properties(appAscent PROPERTIES
+  set_target_properties(Ascent PROPERTIES
     QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/ios/LaunchScreen.storyboard")
 endif()
 
@@ -74,7 +74,7 @@ endif()
 # which compiles the QML into the binary.
 deploy_resources("${QmlFiles};${AssetsFiles}")
 
-qt_add_qml_module(appAscent
+qt_add_qml_module(Ascent
     URI Ascent
     VERSION 1.0
 # uncomment for publishing:
@@ -83,10 +83,10 @@ qt_add_qml_module(appAscent
     NO_RESOURCE_TARGET_PATH
 )
 
-target_compile_definitions(appAscent
+target_compile_definitions(Ascent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
-target_link_libraries(appAscent PRIVATE AscentCore Felgo)
+target_link_libraries(Ascent PRIVATE AscentCore Felgo)
 
 if(APPLE AND NOT IOS)
   # The linker signs the executable ad hoc, and everything copied into the bundle
@@ -97,8 +97,8 @@ if(APPLE AND NOT IOS)
   # Registered after the copy steps so it is the last thing that runs. Editing
   # the deployed QML by hand invalidates it again, which costs nothing but the
   # icon until the next build.
-  add_custom_command(TARGET appAscent POST_BUILD
-    COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:appAscent>"
+  add_custom_command(TARGET Ascent POST_BUILD
+    COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:Ascent>"
     COMMENT "Signing the bundle so macOS accepts its resources"
     VERBATIM)
 endif()
