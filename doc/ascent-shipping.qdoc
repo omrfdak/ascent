@@ -4,9 +4,138 @@
     \previouspage Juice
     \nextpage Further Perspectives
 
+    A game that forgets everything when it closes is a demo. This chapter is
+    about the parts that survive the app being killed, and about the numbers a
+    player wants to see once they have played more than one round.
+
     \section1 Remembering the Balance Between Sessions
 
-    \section1 The Stats Panel
+    Two values have to outlive the process: the balance and the statistics.
+    Felgo's \c Storage is a key-value store over SQLite, which is the right size
+    of tool for two keys.
+
+    \snippet qml/SavedGame.qml storage
+
+    The interesting part is what a first launch looks like. Storage answers with
+    \c undefined for a key that was never written, and \c undefined is exactly
+    what should land the player on a fresh wallet - so there is no separate
+    "have I run before" flag to keep in step with the data it describes.
+
+    The wallet decides what to do with what it is handed:
+
+    \code
+    void Wallet::restore(qreal balance)
+    {
+      if (balance <= 0.0)
+        return;
+
+      m_balance = toPoints(balance);
+      emit balanceChanged();
+    }
+    \endcode
+
+    A balance of zero or less is not restored. A hand-edited database, a key
+    that was never written, a half-finished write - all of them leave the wallet
+    on the balance it was constructed with, which is what a new player gets.
+    Restoring a nonsensical balance would be worse than ignoring it.
+
+    Writing happens on the signal, not on a timer and not on shutdown:
+
+    \code
+    Connections {
+      target: PlayerWallet
+
+      function onBalanceChanged() {
+        storage.setValue("balance", PlayerWallet.balance)
+      }
+    }
+    \endcode
+
+    That has a consequence worth stating out loud: a bet is deducted and written
+    the moment it is accepted, so force-quitting mid-round does not get the stake
+    back. That is not a bug to fix later - a game that let a player escape a
+    losing round by killing the app would be a game with no losing rounds.
+
+    \section1 Counting What the Player Did
+
+    The statistics watch the round source rather than being told by the screen.
+
+    \snippet src/PlayerStats.cpp settle-the-round
+
+    Three decisions are visible in those few lines.
+
+    A round with no stake in it is not counted at all. Watching a round costs
+    nothing and proves nothing, and counting it would turn every statistic into
+    a measure of how long the app was left open.
+
+    A round is counted when it ends, not when it starts. Until the balloon pops
+    the round is neither won nor lost, so there is nothing to record.
+
+    And the streak is reset rather than decremented. A streak is a run of wins,
+    so one loss ends it - while \c bestStreak keeps what the run was worth.
+
+    Saving is one map rather than seven keys:
+
+    \snippet src/PlayerStats.cpp save-restore
+
+    Every field falls back to what a new player starts with. A save written by a
+    build that had never heard of a particular statistic still loads, and the
+    missing value reads as "none yet" instead of as a failure.
+
+    \section1 A Setting That Has To Be Exact
+
+    An automatic cash out is a standing instruction: take the money at this
+    multiplier whether or not anyone is watching. The engine handles it in the
+    one place the crash point is also pinned.
+
+    \snippet src/RoundEngine.cpp auto-cash-out
+
+    A 16 ms clock never lands on the threshold. It lands somewhere past it, and
+    paying at wherever it landed would make the setting a suggestion - so the
+    multiplier is pinned to the target, exactly as a crash is pinned to the
+    committed point.
+
+    Two rules follow from where this sits in \c advanceTo.
+
+    Reaching the target on the same tick the balloon pops is a loss. A player
+    tapping at that moment would have been too late as well: the number reads one
+    step short and then the round is over. The setting does not get a better deal
+    than a hand on the button.
+
+    The target is settled \e before the crash even when a single tick covers
+    both. That ordering is the whole reason it is written this way: a dropped
+    frame - a hitch, a slow paint, a debugger pause - must not turn a win into a
+    loss. The first version checked the crash first, and a test that advanced the
+    round by a whole minute in one step caught it.
+
+    \section1 The Strip, and Checking It
+
+    The last ten rounds are kept for the strip along the top of the screen, and
+    each one carries more than its multiplier:
+
+    \snippet src/RoundHistory.cpp record-round
+
+    The commitment and the revealed seed travel with the round, because a result
+    that cannot be checked afterwards is just a number. That is what the
+    verification screen promised in the fairness chapter reads from - and it
+    re-derives the crash point from the seed every time the list is drawn rather
+    than trusting a verdict stored next to the data it is meant to be checking.
+
+    One detail there is deliberate. The screen is handed the game's own
+    \c ProvablyFair instance:
+
+    \code
+    qmlRegisterSingletonInstance(uri, 1, 0, "Fairness", fair);
+    \endcode
+
+    Not a second instance built for the occasion. Two copies could be configured
+    differently - a different house edge is all it would take - and then the
+    screen would be confirming a claim nobody made, with arithmetic the game does
+    not use.
+
+    Rounds are recorded whether or not they were bet on, which is the opposite of
+    how the statistics work. The distinction is worth keeping: the strip is what
+    the game did, and the statistics are what the player did.
 
     \section1 Running on iOS
 
