@@ -90,3 +90,15 @@ bool Wallet::bailOut()
 
   return true;
 }
+
+void Wallet::restore(qreal balance)
+{
+  // A saved balance that makes no sense - a hand edited database, or a key
+  // that was never written - leaves the wallet on the balance it was built
+  // with, which is what a new player gets.
+  if (balance <= 0.0)
+    return;
+
+  m_balance = toPoints(balance);
+  emit balanceChanged();
+}

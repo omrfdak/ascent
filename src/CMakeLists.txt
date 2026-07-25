@@ -5,6 +5,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 add_library(AscentCore STATIC
   CrashCurve.cpp
   LocalRoundSource.cpp
+  PlayerStats.cpp
   ProvablyFair.cpp
   RoundEngine.cpp
   RoundSource.cpp

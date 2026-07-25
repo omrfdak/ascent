@@ -39,6 +39,11 @@ public:
   // Refills a player who can no longer afford the smallest bet.
   Q_INVOKABLE bool bailOut();
 
+  // Puts back a balance that was saved when the game was last closed. It is
+  // separate from the rest because it is the one change that is not the result
+  // of a round.
+  Q_INVOKABLE void restore(qreal balance);
+
 signals:
   void balanceChanged();
 

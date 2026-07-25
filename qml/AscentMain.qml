@@ -49,6 +49,10 @@ GameWindow {
     id: gameAudio
   }
 
+  SavedGame {
+    id: savedGame
+  }
+
   Connections {
     target: Rounds
 
