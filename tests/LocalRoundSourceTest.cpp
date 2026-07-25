@@ -21,6 +21,7 @@ private slots:
   void revealedSeedMatchesThePublishedCommitment();
   void betsAreAnsweredEitherWay();
   void cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash();
+  void walletFollowsWhatHappenedInTheRound();
   void stopEndsTheCycle();
 
 private:
@@ -169,6 +170,36 @@ void LocalRoundSourceTest::cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash
 
   m_source->requestCashOut();
   QCOMPARE(refused.count(), 1);
+}
+
+void LocalRoundSourceTest::walletFollowsWhatHappenedInTheRound()
+{
+  QSignalSpy confirmed(m_source.get(), &RoundSource::cashOutConfirmed);
+  QSignalSpy crashes(m_source.get(), &RoundSource::roundCrashed);
+  QSignalSpy openings(m_source.get(), &RoundSource::bettingOpened);
+  QSignalSpy started(m_source.get(), &RoundSource::roundStarted);
+
+  m_source->requestBet(100);
+  m_source->start();
+  QVERIFY(started.wait(10000));
+
+  m_source->requestCashOut();
+  const qreal payout = confirmed.first().at(0).toReal();
+
+  // Cashed out in time: the stake comes back multiplied. Cashing out on the
+  // first frame is worth exactly the stake, never less.
+  QCOMPARE(m_wallet->balance(), 900.0 + payout);
+  QVERIFY(payout >= 100.0);
+
+  QVERIFY(crashes.wait(10000));
+  const qreal beforeSecondRound = m_wallet->balance();
+
+  QVERIFY(openings.wait(10000));
+  m_source->requestBet(100);
+  QVERIFY(crashes.wait(10000));
+
+  // Sat through the pop this time: the stake is simply gone.
+  QCOMPARE(m_wallet->balance(), beforeSecondRound - 100.0);
 }
 
 void LocalRoundSourceTest::stopEndsTheCycle()
