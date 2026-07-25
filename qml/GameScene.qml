@@ -70,6 +70,22 @@ Item {
         }
       }
 
+      Text {
+        id: verifyToggle
+
+        text: qsTr("verify")
+        color: Qt.rgba(0.561, 0.639, 0.816, 1)
+        font.pixelSize: 14
+
+        MouseArea {
+          anchors {
+            fill: parent
+            margins: -8
+          }
+          onClicked: verifyPanel.visible = true
+        }
+      }
+
       // Felgo pauses every sound and the music from these two settings and
       // keeps them across runs, so silencing the game is a one line switch. It
       // sits in the corner until the menu arrives to give it a proper home.
@@ -195,6 +211,13 @@ Item {
   // in it. It moves into the menu once there is a menu to put it in.
   StatsPanel {
     id: statsPanel
+
+    anchors.fill: parent
+    visible: false
+  }
+
+  VerifyPanel {
+    id: verifyPanel
 
     anchors.fill: parent
     visible: false

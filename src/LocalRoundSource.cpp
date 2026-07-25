@@ -37,6 +37,11 @@ CrashCurve *LocalRoundSource::curve() const
   return m_curve;
 }
 
+ProvablyFair *LocalRoundSource::fair() const
+{
+  return m_fair;
+}
+
 QString LocalRoundSource::commitment() const
 {
   return m_commitment;

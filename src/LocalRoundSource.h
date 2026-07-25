@@ -42,6 +42,10 @@ public:
   RoundEngine *engine() const;
   CrashCurve *curve() const;
 
+  // The same object the rounds are decided with, so a verification screen
+  // cannot check the proof against a second, differently configured copy.
+  ProvablyFair *fair() const;
+
   QString commitment() const;
 
   int bettingMsRemaining() const;
