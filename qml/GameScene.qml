@@ -12,7 +12,7 @@ import QtQuick
 import QtQuick.Layouts
 import Ascent
 
-Item {
+SceneBase {
   id: root
 
   // Applied as a transform so the scene can be shaken without any of its
@@ -55,9 +55,9 @@ Item {
       }
 
       Text {
-        id: statsToggle
+        id: menuToggle
 
-        text: qsTr("stats")
+        text: qsTr("menu")
         color: Qt.rgba(0.561, 0.639, 0.816, 1)
         font.pixelSize: 14
 
@@ -66,45 +66,7 @@ Item {
             fill: parent
             margins: -8
           }
-          onClicked: statsPanel.visible = true
-        }
-      }
-
-      Text {
-        id: verifyToggle
-
-        text: qsTr("verify")
-        color: Qt.rgba(0.561, 0.639, 0.816, 1)
-        font.pixelSize: 14
-
-        MouseArea {
-          anchors {
-            fill: parent
-            margins: -8
-          }
-          onClicked: verifyPanel.visible = true
-        }
-      }
-
-      // Felgo pauses every sound and the music from these two settings and
-      // keeps them across runs, so silencing the game is a one line switch. It
-      // sits in the corner until the menu arrives to give it a proper home.
-      Text {
-        id: soundToggle
-
-        text: settings.soundEnabled ? qsTr("sound on") : qsTr("sound off")
-        color: Qt.rgba(0.561, 0.639, 0.816, 1)
-        font.pixelSize: 14
-
-        MouseArea {
-          anchors {
-            fill: parent
-            margins: -8
-          }
-          onClicked: {
-            settings.soundEnabled = !settings.soundEnabled
-            settings.musicEnabled = settings.soundEnabled
-          }
+          onClicked: root.backRequested()
         }
       }
     }
@@ -207,20 +169,14 @@ Item {
     }
   }
 
-  // Outside the layout on purpose: it covers the scene rather than taking a row
-  // in it. It moves into the menu once there is a menu to put it in.
-  StatsPanel {
-    id: statsPanel
 
-    anchors.fill: parent
-    visible: false
-  }
+  // Over the full window rather than the scene, and above the layout: the flash
+  // belongs to the moment, not to the playfield.
+  CrashFlash {
+    id: crashFlash
 
-  VerifyPanel {
-    id: verifyPanel
-
-    anchors.fill: parent
-    visible: false
+    anchors.fill: root.fullWindowAnchorItem
+    z: 1
   }
 
   QtObject {
@@ -276,6 +232,7 @@ Item {
       // pulls it back down for the next round.
       crashBurst.start()
       screenShake.start()
+      crashFlash.start()
 
       if (Rounds.engine.bet > 0 && !Rounds.engine.hasCashedOut) {
         _.outcomeText = qsTr("−%1 pts").arg(Rounds.engine.bet.toFixed(2))

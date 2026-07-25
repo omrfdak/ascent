@@ -1,6 +1,6 @@
 /*!
- * Application entry point; owns the game window and the scene the game is
- * played in.
+ * Application entry point; owns the window, the scenes in it, and which one of
+ * them the player is looking at.
  */
 
 import Felgo
@@ -11,42 +11,21 @@ import Ascent
 GameWindow {
   id: root
 
-  // Desktop window size. On mobile the scene scales to the device screen instead.
+  // Desktop window size. On mobile the scenes scale to the device screen
+  // instead.
   screenWidth: 480
   screenHeight: 720
 
-  // Portrait: the balloon rises, so vertical space is the playfield.
-  Scene {
-    id: scene
+  MenuScene {
+    id: menuScene
 
-    width: 320
+    onPlayRequested: root.state = "game"
+  }
 
-    // Taller than the window's own ratio: the scene scales to fit, so the extra
-    // logical height is room the layout can give to the balloon rather than
-    // pixels the window has to find. Everything else keeps its proportions.
-    height: 600
+  GameScene {
+    id: gameScene
 
-    // Fills the whole window, not just the scene, so no letterbox bars show
-    // through on a wider display.
-    SkyBackground {
-      id: background
-
-      anchors.fill: scene.fullWindowAnchorItem
-    }
-
-    GameScene {
-      id: gameScene
-
-      anchors.fill: parent
-    }
-
-    // Above everything, and over the full window rather than the scene: the
-    // flash belongs to the moment, not to the playfield.
-    CrashFlash {
-      id: crashFlash
-
-      anchors.fill: scene.fullWindowAnchorItem
-    }
+    onBackRequested: root.state = "menu"
   }
 
   GameAudio {
@@ -57,13 +36,28 @@ GameWindow {
     id: savedGame
   }
 
-  Connections {
-    target: Rounds
+  //! [scene-states]
+  // One scene visible at a time, and the window decides which. A scene asks to
+  // be left and does not name its successor, so the same scene can be reached
+  // from anywhere without knowing what came before it.
+  //
+  // The game opens on the game: rounds are already cycling, and a title screen
+  // between the player and the next one is a door with nothing behind it.
+  state: "game"
 
-    function onRoundCrashed() {
-      crashFlash.start()
+  states: [
+    State {
+      name: "menu"
+      PropertyChanges { menuScene.opacity: 1 }
+      PropertyChanges { root.activeScene: menuScene }
+    },
+    State {
+      name: "game"
+      PropertyChanges { gameScene.opacity: 1 }
+      PropertyChanges { root.activeScene: gameScene }
     }
-  }
+  ]
+  //! [scene-states]
 
   //! [splash]
   // Not Component.onCompleted: on a free license the splash screen sits on top
