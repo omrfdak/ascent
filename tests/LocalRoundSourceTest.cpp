@@ -22,6 +22,7 @@ private slots:
   void betsAreAnsweredEitherWay();
   void cashOutIsConfirmedWhileRunningAndRefusedAfterTheCrash();
   void walletFollowsWhatHappenedInTheRound();
+  void autoCashOutFiresOnTheGameClock();
   void stopEndsTheCycle();
 
 private:
@@ -200,6 +201,38 @@ void LocalRoundSourceTest::walletFollowsWhatHappenedInTheRound()
 
   // Sat through the pop this time: the stake is simply gone.
   QCOMPARE(m_wallet->balance(), beforeSecondRound - 100.0);
+}
+
+void LocalRoundSourceTest::autoCashOutFiresOnTheGameClock()
+{
+  // Off the real 16 ms clock this time, rather than by advancing the engine by
+  // hand: a threshold that only works when a test steps the round would be a
+  // threshold that does not work.
+  m_source->engine()->setAutoCashOutAt(1.20);
+  m_source->requestBet(100);
+
+  QSignalSpy confirmed(m_source.get(), &RoundSource::cashOutConfirmed);
+  QSignalSpy crashes(m_source.get(), &RoundSource::roundCrashed);
+
+  m_source->start();
+  QVERIFY(crashes.wait(10000));
+
+  const qreal crashPoint = crashes.first().at(0).toReal();
+
+  if (crashPoint <= 1.20) {
+    // The round popped before the threshold, so nothing should have been paid.
+    QCOMPARE(confirmed.count(), 0);
+    QCOMPARE(m_wallet->balance(), 900.0);
+
+    return;
+  }
+
+  // Paid at the threshold to the point, not at wherever the clock happened to
+  // tick past it.
+  QCOMPARE(confirmed.count(), 1);
+  QCOMPARE(confirmed.first().at(1).toReal(), 1.20);
+  QCOMPARE(confirmed.first().at(0).toReal(), 120.0);
+  QCOMPARE(m_wallet->balance(), 1020.0);
 }
 
 void LocalRoundSourceTest::stopEndsTheCycle()

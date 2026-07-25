@@ -25,7 +25,7 @@ Text {
     ? _.mix(_.calmColor, _.hotColor, root.tension)
     : (Rounds.engine.state === RoundEngine.Betting ? _.restingColor : _.crashedColor)
 
-  font.pixelSize: 64
+  font.pixelSize: 56
   scale: (1 + 0.16 * root.tension) * _.pulse
 
   //! [heartbeat]

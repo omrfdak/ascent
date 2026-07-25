@@ -24,6 +24,8 @@ class RoundEngine : public QObject
   Q_PROPERTY(qreal multiplier READ multiplier NOTIFY multiplierChanged)
   Q_PROPERTY(qreal bet READ bet NOTIFY betChanged)
   Q_PROPERTY(bool hasCashedOut READ hasCashedOut NOTIFY hasCashedOutChanged)
+  Q_PROPERTY(qreal autoCashOutAt READ autoCashOutAt WRITE setAutoCashOutAt
+               NOTIFY autoCashOutAtChanged)
 
 public:
   //! [round-states]
@@ -43,6 +45,11 @@ public:
   qreal bet() const;
   qreal crashPoint() const;
   bool hasCashedOut() const;
+
+  // The multiplier the round cashes itself out at, or zero for off. It is a
+  // standing instruction rather than a request, so it survives the round.
+  qreal autoCashOutAt() const;
+  void setAutoCashOutAt(qreal autoCashOutAt);
 
   // Puts the player's bet in for the round that is about to start.
   Q_INVOKABLE bool placeBet(qreal bet);
@@ -65,12 +72,16 @@ signals:
   void multiplierChanged();
   void betChanged();
   void hasCashedOutChanged();
+  void autoCashOutAtChanged();
 
   void roundStarted();
   void cashedOut(qreal payout, qreal multiplier);
   void crashed(qreal crashPoint);
 
 private:
+  // Cashes out at the standing target if this tick reached it.
+  void takeTheMoneyAtTheTarget(qreal shown);
+
   void setState(State state);
   void setMultiplier(qreal multiplier);
   void setHasCashedOut(bool hasCashedOut);
@@ -82,6 +93,7 @@ private:
   qreal m_multiplier = 1.0;
   qreal m_crashPoint = 1.0;
   qreal m_bet = 0.0;
+  qreal m_autoCashOutAt = 0.0;
   bool m_hasCashedOut = false;
 };
 

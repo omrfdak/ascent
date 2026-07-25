@@ -23,6 +23,7 @@ Item {
     Component.onCompleted: {
       PlayerWallet.restore(storage.getValue("balance") || 0)
       PlayerStats.restore(storage.getValue("stats") || ({}))
+      Rounds.engine.autoCashOutAt = storage.getValue("autoCashOutAt") || 0
     }
   }
   //! [storage]
@@ -40,6 +41,14 @@ Item {
 
     function onStatsChanged() {
       storage.setValue("stats", PlayerStats.save())
+    }
+  }
+
+  Connections {
+    target: Rounds.engine
+
+    function onAutoCashOutAtChanged() {
+      storage.setValue("autoCashOutAt", Rounds.engine.autoCashOutAt)
     }
   }
 }

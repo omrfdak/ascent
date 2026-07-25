@@ -24,6 +24,9 @@ private slots:
   void losesTheBetWhenThePlayerWaitsTooLong();
   void clearsTheBetWhenTheNextRoundOpens();
   void announcesWhetherThePlayerIsStillIn();
+  void autoCashOutPaysExactlyAtTheTarget();
+  void autoCashOutStaysOutOfRoundsThatPopFirst();
+  void autoCashOutIsAStandingInstruction();
 
 private:
   CrashCurve m_curve;
@@ -215,6 +218,77 @@ void RoundEngineTest::announcesWhetherThePlayerIsStillIn()
 
   QVERIFY(!m_engine->hasCashedOut());
   QCOMPARE(spy.count(), 2);
+}
+
+void RoundEngineTest::autoCashOutPaysExactlyAtTheTarget()
+{
+  m_engine->setAutoCashOutAt(2.0);
+  QVERIFY(m_engine->placeBet(100));
+  QVERIFY(m_engine->startRound(5.0));
+
+  QSignalSpy cashedOut(m_engine.get(), &RoundEngine::cashedOut);
+
+  // A clock never lands on the threshold. Advancing past it by a whole second
+  // is the worst case a 16 ms tick can produce, and the payout still has to be
+  // the target rather than wherever the tick happened to fall.
+  QVERIFY(m_engine->advanceTo(8000));
+
+  QCOMPARE(cashedOut.count(), 1);
+  QCOMPARE(cashedOut.first().at(1).toReal(), 2.0);
+  QCOMPARE(cashedOut.first().at(0).toReal(), 200.0);
+  QCOMPARE(m_wallet->balance(), 1100.0);
+
+  // The round is not over: it keeps climbing to the point it committed to, the
+  // player is simply out of it.
+  QCOMPARE(m_engine->state(), RoundEngine::Running);
+  QVERIFY(m_engine->hasCashedOut());
+}
+
+void RoundEngineTest::autoCashOutStaysOutOfRoundsThatPopFirst()
+{
+  m_engine->setAutoCashOutAt(3.0);
+  QVERIFY(m_engine->placeBet(100));
+
+  // The round pops at exactly the target. A player tapping at that moment would
+  // have been too late - the multiplier reads 2.99 and then it is over - so the
+  // setting does not get a better deal than a hand on the button.
+  QVERIFY(m_engine->startRound(3.0));
+  QVERIFY(m_engine->advanceTo(60000));
+
+  QCOMPARE(m_engine->state(), RoundEngine::Crashed);
+  QVERIFY(!m_engine->hasCashedOut());
+  QCOMPARE(m_wallet->balance(), 900.0);
+}
+
+void RoundEngineTest::autoCashOutIsAStandingInstruction()
+{
+  m_engine->setAutoCashOutAt(1.5);
+
+  // Two rounds without touching the setting again: it is a preference, not a
+  // request that belongs to one round.
+  for (int round = 0; round < 2; ++round) {
+    QVERIFY(m_engine->placeBet(100));
+    QVERIFY(m_engine->startRound(4.0));
+    QVERIFY(m_engine->advanceTo(60000));
+    QVERIFY(m_engine->settle());
+    QVERIFY(m_engine->openBetting());
+  }
+
+  QCOMPARE(m_engine->autoCashOutAt(), 1.5);
+  QCOMPARE(m_wallet->balance(), 1100.0);
+
+  // Off, and a value that pays back exactly the stake counts as off.
+  m_engine->setAutoCashOutAt(0);
+  QCOMPARE(m_engine->autoCashOutAt(), 0.0);
+
+  m_engine->setAutoCashOutAt(1.0);
+  QCOMPARE(m_engine->autoCashOutAt(), 0.0);
+
+  QVERIFY(m_engine->placeBet(100));
+  QVERIFY(m_engine->startRound(4.0));
+  QVERIFY(m_engine->advanceTo(60000));
+
+  QVERIFY(!m_engine->hasCashedOut());
 }
 
 QTEST_APPLESS_MAIN(RoundEngineTest)

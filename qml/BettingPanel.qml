@@ -9,7 +9,7 @@ import Ascent
 Column {
   id: root
 
-  spacing: 10
+  spacing: 8
 
   Row {
     id: stakeRow
@@ -45,6 +45,12 @@ Column {
       enabled: _.canChangeStake && _.stake + _.stakeStep <= _.highestAffordableStake
       onClicked: _.stake += _.stakeStep
     }
+  }
+
+  AutoCashOutRow {
+    id: autoCashOutRow
+
+    anchors.horizontalCenter: parent.horizontalCenter
   }
 
   GameButton {

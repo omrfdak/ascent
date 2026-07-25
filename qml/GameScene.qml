@@ -20,11 +20,15 @@ Item {
     id: screenShake
   }
 
+  // In a lane of its own down the left. The multiplier is 56 pixels tall and
+  // takes most of the width at four digits, so a balloon rising up the middle
+  // ends up climbing through the number - which reads as a collision rather
+  // than as altitude.
   Balloon {
     id: balloon
 
-    x: (root.width - width) / 2
-    y: _.groundY - _.riseProgress * _.travel
+    x: root.width * 0.11
+    y: _.groundY - _.riseProgress * (_.groundY - _.ceilingY)
     visible: Rounds.engine.state === RoundEngine.Betting
       || Rounds.engine.state === RoundEngine.Running
     riseProgress: _.riseProgress
@@ -40,7 +44,12 @@ Item {
   Column {
     id: readout
 
-    anchors.centerIn: parent
+    anchors {
+      centerIn: parent
+
+      // Above the middle, because the bottom third belongs to the panel.
+      verticalCenterOffset: -30
+    }
     spacing: 12
 
     MultiplierReadout {
@@ -58,16 +67,24 @@ Item {
       font.pixelSize: 16
     }
 
-    Text {
-      id: outcomeLabel
+  }
 
-      anchors.horizontalCenter: parent.horizontalCenter
-      text: _.outcomeText
-      color: _.outcomeColor
-      font.pixelSize: 20
-      font.bold: true
-      visible: _.outcomeText.length > 0
+  // In the corner with the balance rather than under the multiplier: it is a
+  // line about money, and out of the middle it can neither push the readout
+  // around as it comes and goes nor reach across the balloon's lane.
+  Text {
+    id: outcomeLabel
+
+    anchors {
+      top: soundToggle.bottom
+      right: parent.right
+      topMargin: 10
+      rightMargin: 12
     }
+    text: _.outcomeText
+    color: _.outcomeColor
+    font.pixelSize: 16
+    font.bold: true
   }
 
   Text {
@@ -121,13 +138,15 @@ Item {
     }
   }
 
+  // Stacked above the round hash rather than both being pinned to the bottom
+  // edge, which is how the two ended up on top of each other.
   BettingPanel {
     id: bettingPanel
 
     anchors {
-      bottom: parent.bottom
+      bottom: commitmentLabel.top
       horizontalCenter: parent.horizontalCenter
-      bottomMargin: 36
+      bottomMargin: 10
     }
   }
 
@@ -140,7 +159,7 @@ Item {
     anchors {
       bottom: parent.bottom
       horizontalCenter: parent.horizontalCenter
-      margins: 12
+      bottomMargin: 10
     }
     text: _.revealedSeed.length > 0
       ? qsTr("seed %1…").arg(_.revealedSeed.substring(0, 12))
@@ -152,8 +171,11 @@ Item {
   QtObject {
     id: _
 
-    readonly property real groundY: root.height - balloon.height - 24
-    readonly property real travel: _.groundY - 24
+    // The lane the balloon has to itself: it starts clear of the panel and
+    // stops clear of the strip of recent rounds, so nothing it does can put it
+    // on top of something that has to stay readable.
+    readonly property real groundY: bettingPanel.y - balloon.height - 12
+    readonly property real ceilingY: recentRounds.y + recentRounds.height + 12
 
     // The multiplier has no ceiling but the scene does. Reading the height off
     // the logarithm means every scale gets its own stretch of sky: 2x is a third
