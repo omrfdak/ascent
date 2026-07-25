@@ -17,18 +17,20 @@ Rectangle {
   radius: 8
   color: {
     if (!root.enabled)
-      return Qt.rgba(0.13, 0.16, 0.26, 1)
+      return Style.disabled
 
-    return tap.pressed ? Qt.rgba(0.28, 0.62, 0.45, 1) : Qt.rgba(0.22, 0.75, 0.5, 1)
+    return tap.pressed ? Style.accentPressed : Style.accent
   }
 
   Text {
     id: label
 
     anchors.centerIn: parent
-    color: root.enabled ? Qt.rgba(0.03, 0.09, 0.07, 1) : Qt.rgba(0.42, 0.47, 0.6, 1)
-    font.pixelSize: 15
-    font.bold: true
+    color: root.enabled ? Style.onAccent : Style.onDisabled
+    font {
+      pixelSize: Style.bodySize
+      bold: true
+    }
   }
 
   TapHandler {

@@ -130,6 +130,28 @@
     Animation durations are read when a loop starts and not while it runs, so a
     fast round speeds up between beats instead of stuttering inside one.
 
+    \section1 One Place for the Colours
+
+    Every colour and every text size the interface uses is a property of a single
+    QML singleton, \c Style. The pictures are exempt - the sky gradient, the
+    balloon and the sparks keep their colours where they are drawn, because those
+    are chosen against each other rather than against the rest of the screen.
+
+    \snippet qml/Style.qml type-scale
+
+    Two details are worth copying. The singleton is not called \c Theme, because
+    Felgo declares a \c Theme singleton of its own: reusing the name resolves to
+    the wrong object in whichever scope Felgo's import happens to reach, and it
+    fails as an undefined property rather than as an error naming the clash.
+
+    And because this game loads its QML as plain files next to the binary, the
+    singleton is declared in a \c qmldir beside them rather than in the module
+    that carries the C++ types:
+
+    \code
+    singleton Style 1.0 Style.qml
+    \endcode
+
     \section1 What This Costs
 
     Nothing in this chapter runs a clock of its own. The particles, the shake,

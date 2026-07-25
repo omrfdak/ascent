@@ -24,9 +24,9 @@ SceneBase {
 
       Layout.alignment: Qt.AlignHCenter
       text: qsTr("Ascent")
-      color: Qt.rgba(1, 1, 1, 1)
+      color: Style.text
       font {
-        pixelSize: 48
+        pixelSize: Style.titleSize
         bold: true
       }
     }
@@ -38,8 +38,8 @@ SceneBase {
       Layout.bottomMargin: 16
       horizontalAlignment: Text.AlignHCenter
       text: qsTr("Cash out before it pops")
-      color: Qt.rgba(0.561, 0.639, 0.816, 1)
-      font.pixelSize: 14
+      color: Style.textMuted
+      font.pixelSize: Style.labelSize
     }
 
     GameButton {
@@ -84,8 +84,8 @@ SceneBase {
       Layout.topMargin: 16
       horizontalAlignment: Text.AlignHCenter
       text: qsTr("%1 pts").arg(PlayerWallet.balance.toFixed(2))
-      color: Qt.rgba(0.561, 0.639, 0.816, 1)
-      font.pixelSize: 14
+      color: Style.textMuted
+      font.pixelSize: Style.labelSize
     }
   }
 

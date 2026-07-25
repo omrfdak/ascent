@@ -44,8 +44,8 @@ SceneBase {
         id: balanceLabel
 
         text: qsTr("%1 pts").arg(PlayerWallet.balance.toFixed(2))
-        color: Qt.rgba(0.561, 0.639, 0.816, 1)
-        font.pixelSize: 14
+        color: Style.textMuted
+        font.pixelSize: Style.labelSize
       }
 
       Item {
@@ -58,8 +58,8 @@ SceneBase {
         id: menuToggle
 
         text: qsTr("menu")
-        color: Qt.rgba(0.561, 0.639, 0.816, 1)
-        font.pixelSize: 14
+        color: Style.textMuted
+        font.pixelSize: Style.labelSize
 
         MouseArea {
           anchors {
@@ -84,21 +84,20 @@ SceneBase {
         Layout.minimumHeight: 20
       }
 
-      Item {
-        id: historySpacer
-
-        Layout.fillWidth: true
-      }
-
       // Kept up here with the balance because it is a line about money, and out
-      // of the middle it can come and go without moving anything.
+      // of the middle it can come and go without moving anything. It takes the
+      // width the strip leaves rather than sitting behind a spacer, so a long
+      // payout line is shortened instead of running off the screen.
       Text {
         id: outcomeLabel
 
+        Layout.fillWidth: true
+        horizontalAlignment: Text.AlignRight
+        elide: Text.ElideRight
         text: _.outcomeText
         color: _.outcomeColor
         font {
-          pixelSize: 16
+          pixelSize: Style.bodySize
           bold: true
         }
       }
@@ -116,8 +115,8 @@ SceneBase {
 
       Layout.alignment: Qt.AlignHCenter
       text: _.stateText
-      color: Qt.rgba(0.561, 0.639, 0.816, 1)
-      font.pixelSize: 16
+      color: Style.textMuted
+      font.pixelSize: Style.bodySize
     }
 
     // Whatever height is left after everything else has had its say. The
@@ -164,8 +163,8 @@ SceneBase {
       text: _.revealedSeed.length > 0
         ? qsTr("seed %1…").arg(_.revealedSeed.substring(0, 12))
         : qsTr("round hash %1…").arg(Rounds.commitment.substring(0, 12))
-      color: Qt.rgba(0.35, 0.4, 0.55, 1)
-      font.pixelSize: 12
+      color: Style.textFaint
+      font.pixelSize: Style.captionSize
     }
   }
 
@@ -191,10 +190,6 @@ SceneBase {
     readonly property real riseProgress: 1
       - 1 / (1 + 0.9 * Math.log(Rounds.engine.multiplier))
 
-    readonly property color climbingColor: Qt.rgba(0.55, 0.95, 0.65, 1)
-    readonly property color crashedColor: Qt.rgba(0.95, 0.35, 0.4, 1)
-    readonly property color restingColor: Qt.rgba(1, 1, 1, 1)
-
     readonly property string stateText: {
       switch (Rounds.engine.state) {
       case RoundEngine.Betting:
@@ -210,7 +205,7 @@ SceneBase {
     }
 
     property string outcomeText: ""
-    property color outcomeColor: _.restingColor
+    property color outcomeColor: Style.text
     property string revealedSeed: ""
   }
 
@@ -220,7 +215,7 @@ SceneBase {
     function onCashOutConfirmed(payout, multiplier) {
       _.outcomeText = qsTr("+%1 pts at %2x")
         .arg(payout.toFixed(2)).arg(multiplier.toFixed(2))
-      _.outcomeColor = _.climbingColor
+      _.outcomeColor = Style.climbing
     }
 
     function onRoundCrashed(crashPoint, revealedSeed) {
@@ -236,7 +231,7 @@ SceneBase {
 
       if (Rounds.engine.bet > 0 && !Rounds.engine.hasCashedOut) {
         _.outcomeText = qsTr("−%1 pts").arg(Rounds.engine.bet.toFixed(2))
-        _.outcomeColor = _.crashedColor
+        _.outcomeColor = Style.crashed
       }
     }
 

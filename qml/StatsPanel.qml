@@ -28,7 +28,7 @@ Item {
     id: backdrop
 
     anchors.fill: parent
-    color: Qt.rgba(0.02, 0.03, 0.08, 0.82)
+    color: Style.scrim
     z: -1
   }
 
@@ -39,10 +39,10 @@ Item {
     width: Math.min(parent.width - 40, 280)
     height: rows.implicitHeight + 32
     radius: 10
-    color: Qt.rgba(0.09, 0.11, 0.2, 1)
+    color: Style.surface
     border {
       width: 1
-      color: Qt.rgba(1, 1, 1, 0.08)
+      color: Style.hairline
     }
 
     // Taps on the card are not taps away from it.
@@ -66,9 +66,9 @@ Item {
 
         Layout.fillWidth: true
         text: qsTr("Your rounds")
-        color: Qt.rgba(1, 1, 1, 1)
+        color: Style.text
         font {
-          pixelSize: 18
+          pixelSize: Style.headingSize
           bold: true
         }
       }
@@ -100,9 +100,9 @@ Item {
               : Text.AlignLeft
             text: entry.modelData
             color: entry.isValue
-              ? Qt.rgba(1, 1, 1, 1)
-              : Qt.rgba(0.561, 0.639, 0.816, 1)
-            font.pixelSize: 14
+              ? Style.text
+              : Style.textMuted
+            font.pixelSize: Style.labelSize
           }
         }
       }

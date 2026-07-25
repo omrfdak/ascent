@@ -38,8 +38,8 @@ GridLayout {
     Layout.minimumWidth: _.labelWidth
     horizontalAlignment: Text.AlignHCenter
     text: qsTr("%1 pts").arg(_.stake)
-    color: Qt.rgba(1, 1, 1, 1)
-    font.pixelSize: 18
+    color: Style.text
+    font.pixelSize: Style.headingSize
   }
 
   GameButton {
@@ -74,8 +74,8 @@ GridLayout {
     text: _.isAutoOn
       ? qsTr("auto %1x").arg(Rounds.engine.autoCashOutAt.toFixed(2))
       : qsTr("auto off")
-    color: _.isAutoOn ? Qt.rgba(1, 1, 1, 1) : Qt.rgba(0.45, 0.5, 0.62, 1)
-    font.pixelSize: 14
+    color: _.isAutoOn ? Style.text : Style.textFaint
+    font.pixelSize: Style.labelSize
   }
 
   GameButton {

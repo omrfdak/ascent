@@ -24,7 +24,7 @@ Item {
     id: backdrop
 
     anchors.fill: parent
-    color: Qt.rgba(0.02, 0.03, 0.08, 0.9)
+    color: Style.scrim
     z: -1
   }
 
@@ -35,10 +35,10 @@ Item {
     width: Math.min(parent.width - 24, 300)
     height: Math.min(parent.height - 40, rows.implicitHeight + 32)
     radius: 10
-    color: Qt.rgba(0.09, 0.11, 0.2, 1)
+    color: Style.surface
     border {
       width: 1
-      color: Qt.rgba(1, 1, 1, 0.08)
+      color: Style.hairline
     }
 
     MouseArea {
@@ -61,9 +61,9 @@ Item {
 
         Layout.fillWidth: true
         text: qsTr("Check a round")
-        color: Qt.rgba(1, 1, 1, 1)
+        color: Style.text
         font {
-          pixelSize: 18
+          pixelSize: Style.headingSize
           bold: true
         }
       }
@@ -74,9 +74,9 @@ Item {
         Layout.fillWidth: true
         text: qsTr("The hash was on screen before betting opened. Hash the "
                    + "seed yourself and you get it back.")
-        color: Qt.rgba(0.561, 0.639, 0.816, 1)
+        color: Style.textMuted
         wrapMode: Text.WordWrap
-        font.pixelSize: 12
+        font.pixelSize: Style.captionSize
       }
 
       ListView {
@@ -107,7 +107,7 @@ Item {
           width: roundList.width
           height: rowContent.implicitHeight + 16
           radius: 6
-          color: Qt.rgba(1, 1, 1, 0.05)
+          color: Style.inset
 
           ColumnLayout {
             id: rowContent
@@ -124,9 +124,9 @@ Item {
 
               Text {
                 text: qsTr("%1x").arg(row.modelData.multiplier.toFixed(2))
-                color: Qt.rgba(1, 1, 1, 1)
+                color: Style.text
                 font {
-                  pixelSize: 14
+                  pixelSize: Style.labelSize
                   bold: true
                 }
               }
@@ -138,9 +138,9 @@ Item {
               Text {
                 text: row.holdsUp ? qsTr("checks out") : qsTr("does not match")
                 color: row.holdsUp
-                  ? Qt.rgba(0.55, 0.95, 0.65, 1)
-                  : Qt.rgba(0.95, 0.35, 0.4, 1)
-                font.pixelSize: 12
+                  ? Style.climbing
+                  : Style.crashed
+                font.pixelSize: Style.captionSize
               }
             }
 
@@ -153,9 +153,9 @@ Item {
                 .arg(row.modelData.seed)
                 .arg(row.modelData.commitment)
                 .arg(Fairness.crashPointFor(row.modelData.seed).toFixed(2))
-              color: Qt.rgba(0.45, 0.5, 0.62, 1)
+              color: Style.textFaint
               wrapMode: Text.WrapAnywhere
-              font.pixelSize: 10
+              font.pixelSize: Style.fineSize
             }
           }
 
@@ -172,9 +172,9 @@ Item {
         Layout.fillWidth: true
         visible: RecentRounds.rounds.length === 0
         text: qsTr("Nothing to check yet - the first round is still running.")
-        color: Qt.rgba(0.45, 0.5, 0.62, 1)
+        color: Style.textFaint
         wrapMode: Text.WordWrap
-        font.pixelSize: 12
+        font.pixelSize: Style.captionSize
       }
 
       GameButton {

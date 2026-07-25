@@ -15,7 +15,10 @@ Row {
   spacing: 4
 
   Repeater {
-    model: RecentRounds.rounds
+    // Only the last few, even though more are kept. Ten chips are wider than the
+    // scene, and a strip that pushes the screen sideways is worse than a short
+    // one: this is a glance, and the full record is in "Check a round".
+    model: RecentRounds.rounds.slice(0, 4)
 
     Rectangle {
       id: chip
@@ -27,7 +30,7 @@ Row {
       width: label.implicitWidth + 12
       height: 20
       radius: 4
-      color: Qt.rgba(1, 1, 1, 0.06)
+      color: Style.inset
 
       Text {
         id: label
@@ -39,9 +42,9 @@ Row {
         // the strip is the game's record, and a good round missed is still a
         // good round to know about.
         color: chip.modelData.multiplier >= 2
-          ? Qt.rgba(0.55, 0.95, 0.65, 1)
-          : Qt.rgba(0.85, 0.55, 0.55, 1)
-        font.pixelSize: 12
+          ? Style.climbing
+          : Style.crashedQuiet
+        font.pixelSize: Style.captionSize
       }
     }
   }

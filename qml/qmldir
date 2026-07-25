@@ -1,0 +1,3 @@
+# The scenes are loaded as plain files from this directory, so the singleton is
+# declared here rather than in the Ascent module: that one carries the C++ types.
+singleton Style 1.0 Style.qml

@@ -22,10 +22,10 @@ Text {
   text: qsTr("%1x").arg(Rounds.engine.multiplier.toFixed(2))
 
   color: Rounds.engine.state === RoundEngine.Running
-    ? _.mix(_.calmColor, _.hotColor, root.tension)
-    : (Rounds.engine.state === RoundEngine.Betting ? _.restingColor : _.crashedColor)
+    ? _.mix(Style.climbing, Style.hot, root.tension)
+    : (Rounds.engine.state === RoundEngine.Betting ? Style.text : Style.crashed)
 
-  font.pixelSize: 56
+  font.pixelSize: Style.displaySize
   scale: (1 + 0.16 * root.tension) * _.pulse
 
   //! [heartbeat]
@@ -89,11 +89,6 @@ Text {
     id: _
 
     property real pulse: 1
-
-    readonly property color calmColor: Qt.rgba(0.55, 0.95, 0.65, 1)
-    readonly property color hotColor: Qt.rgba(1, 0.78, 0.35, 1)
-    readonly property color crashedColor: Qt.rgba(0.95, 0.35, 0.4, 1)
-    readonly property color restingColor: Qt.rgba(1, 1, 1, 1)
 
     function mix(from, to, amount) {
       return Qt.rgba(from.r + (to.r - from.r) * amount,
