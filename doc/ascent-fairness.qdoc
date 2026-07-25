@@ -4,13 +4,86 @@
     \previouspage Project Setup and the Game Loop
     \nextpage The Round State Machine
 
+    This chapter decides where each round pops - and, more importantly, proves
+    afterwards that the decision was not influenced by the player's bet.
+
     \section1 Why a Random Number Is Not Enough
+
+    The obvious implementation is one line: draw a random number when the round
+    starts and pop there. It works, and it is impossible to defend.
+
+    Not because the number is predictable, but because nobody outside the code
+    can tell when it was drawn. A game that decides the crash point after seeing
+    a large bet looks exactly like a game that decided it before, and the player
+    has no way to tell the two apart. In a game about nerve, "trust me" is a
+    weak answer to a round that popped at 1.01x right after a big stake.
+
+    So the game commits first and reveals later.
 
     \section1 Commit and Reveal
 
+    Before betting opens, a secret seed is drawn and only its hash is published:
+
+    \snippet src/ProvablyFair.cpp commitment
+
+    A plain SHA-256, deliberately. The player can paste the seed into any hashing
+    tool afterwards and get the same string - no custom scheme to take on faith.
+
+    The ordering is what makes the hash mean anything, so it is enforced where
+    the round is set up rather than left as a convention:
+
+    \snippet src/LocalRoundSource.cpp open-betting
+
+    The seed exists and its hash is on screen before the game will accept a
+    single point. After that the game is committed: changing the seed would
+    change the hash the player already saw, and the seed itself gives nothing
+    away - which is the entire job of a hash function.
+
     \section1 Turning a Seed into a Crash Point
 
+    The seed still has to become a multiplier, and the shape of that mapping is
+    what makes the game feel like a crash game:
+
+    \snippet src/ProvablyFair.cpp crash-point
+
+    Fifty-two bits are read off the digest and read as a number between zero and
+    one. Fifty-two, because that is how much a double holds without losing a
+    single step - the fraction is exact rather than nearly exact.
+
+    Then \c {1/(1-x)} stretches that flat number into a long tail. Half the
+    rounds end below 2x, a tenth pass 10x, and one in a hundred runs past 100x.
+    That distribution is the game: if most rounds paid 5x, waiting would be free,
+    and if none did, nobody would wait at all.
+
+    The house edge is not a fee subtracted from the payout. It shifts the whole
+    curve down slightly, which mostly shows up as rounds that pop instantly at
+    1.00x - about one in fifty. It is the same one percent either way, but this
+    way the player sees it happen instead of finding it in the small print.
+
+    The result is floored to two decimals for a reason that costs money if you
+    get it wrong: the multiplier is shown with two decimals, so it must be
+    decided with two decimals. A payout must never be worth more than the number
+    the player read on screen.
+
     \section1 Letting the Player Check the Round
+
+    When the round is over, the seed is published and the whole thing can be
+    recomputed from scratch:
+
+    \snippet src/ProvablyFair.cpp verify
+
+    Both halves have to match. The seed must hash to the commitment that was
+    shown before betting, and it must produce the crash point the round actually
+    ended on. A game that swapped the seed fails the first check; a game that
+    kept the seed but ended the round early fails the second.
+
+    In the running game the seed replaces the hash on screen the moment the
+    balloon pops, so the proof is available without leaving the round. A dedicated
+    verification screen for past rounds comes later in the tutorial.
+
+    None of this needs a server, and none of it is expensive - two hashes per
+    round. What it buys is a game that can answer the only question a crash game
+    ever gets asked.
 
     \include includes/chapters.qdocinc chapters
 */

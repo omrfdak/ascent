@@ -95,6 +95,7 @@ bool RoundEngine::advanceTo(qint64 elapsedMs)
 }
 //! [advance-to]
 
+//! [cash-out]
 bool RoundEngine::cashOut()
 {
   // Only once, only while the balloon is still up, and only with money in.
@@ -108,6 +109,7 @@ bool RoundEngine::cashOut()
 
   return true;
 }
+//! [cash-out]
 
 bool RoundEngine::settle()
 {

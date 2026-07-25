@@ -82,7 +82,9 @@ qreal ProvablyFair::crashPointFor(const QString &seed) const
 }
 //! [crash-point]
 
+//! [verify]
 bool ProvablyFair::verify(const QString &seed, const QString &commitment, qreal crashPoint) const
 {
   return commitmentFor(seed) == commitment && qFuzzyCompare(crashPointFor(seed), crashPoint);
 }
+//! [verify]

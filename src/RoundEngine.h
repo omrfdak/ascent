@@ -26,6 +26,7 @@ class RoundEngine : public QObject
   Q_PROPERTY(bool hasCashedOut READ hasCashedOut NOTIFY hasCashedOutChanged)
 
 public:
+  //! [round-states]
   enum State {
     Betting,  // taking bets, the balloon is on the ground
     Running,  // the multiplier is climbing
@@ -33,6 +34,7 @@ public:
     Settled   // results are on screen, waiting to open the next round
   };
   Q_ENUM(State)
+  //! [round-states]
 
   explicit RoundEngine(CrashCurve *curve, Wallet *wallet, QObject *parent = nullptr);
 
