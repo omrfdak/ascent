@@ -11,3 +11,4 @@ endfunction()
 
 add_core_test(HashingTest)
 add_core_test(CrashCurveTest ${CMAKE_SOURCE_DIR}/src/CrashCurve.cpp)
+add_core_test(ProvablyFairTest ${CMAKE_SOURCE_DIR}/src/ProvablyFair.cpp)
