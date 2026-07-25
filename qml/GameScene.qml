@@ -9,6 +9,17 @@ import Ascent
 Item {
   id: root
 
+  // Applied as a transform so the scene can be shaken without any of its
+  // children giving up the anchors that keep them in place.
+  transform: Translate {
+    x: screenShake.offsetX
+    y: screenShake.offsetY
+  }
+
+  ScreenShake {
+    id: screenShake
+  }
+
   Balloon {
     id: balloon
 
@@ -163,6 +174,7 @@ Item {
       // Fired from wherever the balloon had climbed to, before the binding
       // pulls it back down for the next round.
       crashBurst.start()
+      screenShake.start()
 
       if (Rounds.engine.bet > 0 && !Rounds.engine.hasCashedOut) {
         _.outcomeText = qsTr("−%1 pts").arg(Rounds.engine.bet.toFixed(2))

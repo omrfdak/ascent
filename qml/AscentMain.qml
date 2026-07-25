@@ -36,6 +36,22 @@ GameWindow {
 
       anchors.fill: parent
     }
+
+    // Above everything, and over the full window rather than the scene: the
+    // flash belongs to the moment, not to the playfield.
+    CrashFlash {
+      id: crashFlash
+
+      anchors.fill: scene.fullWindowAnchorItem
+    }
+  }
+
+  Connections {
+    target: Rounds
+
+    function onRoundCrashed() {
+      crashFlash.start()
+    }
   }
 
   //! [splash]
