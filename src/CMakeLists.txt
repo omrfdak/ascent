@@ -4,8 +4,10 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 # compiled once instead of once per target. Nothing in here knows about QML.
 add_library(AscentCore STATIC
   CrashCurve.cpp
+  LocalRoundSource.cpp
   ProvablyFair.cpp
   RoundEngine.cpp
+  RoundSource.cpp
   Wallet.cpp
 )
 

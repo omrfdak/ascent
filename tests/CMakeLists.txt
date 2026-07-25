@@ -10,6 +10,7 @@ endfunction()
 
 add_core_test(HashingTest)
 add_core_test(CrashCurveTest)
+add_core_test(LocalRoundSourceTest)
 add_core_test(ProvablyFairTest)
 add_core_test(RoundEngineTest)
 add_core_test(WalletTest)
