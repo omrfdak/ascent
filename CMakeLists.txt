@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(Ascent VERSION 0.1 LANGUAGES CXX)
+# Qt 6.8's own minimum. Set here rather than left blank because it also becomes
+# LSMinimumSystemVersion, and an empty value there is a bundle that tells macOS
+# nothing about what it can run on.
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "" FORCE)
+endif()
+
+project(Ascent VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -34,7 +41,33 @@ qt_add_executable(appAscent
     ${AssetsFiles}
 )
 
+# Picks up macx/app_icon.icns and ios/Assets.xcassets on its own, so the icons
+# are wired up by being where Felgo looks for them.
 felgo_configure_executable(appAscent)
+
+if(APPLE AND NOT IOS)
+  # Felgo copies the icon into the bundle but names it in a variable of its own
+  # scope, which leaves CFBundleIconFile empty: the file is there and the Dock
+  # never looks at it. The property is what ends up in Info.plist.
+  #
+  # The rest of these are the same story from the other end. Left alone, the
+  # bundle describes itself as "appAscent 0.1" under an identifier taken from the
+  # login name, and Launch Services is entitled to distrust a bundle that
+  # contradicts what the project says about itself.
+  set_target_properties(appAscent PROPERTIES
+    MACOSX_BUNDLE_ICON_FILE app_icon.icns
+    MACOSX_BUNDLE_BUNDLE_NAME "Ascent"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "${PRODUCT_IDENTIFIER}"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PRODUCT_VERSION_NAME}"
+    MACOSX_BUNDLE_BUNDLE_VERSION "${PRODUCT_VERSION_CODE}")
+endif()
+
+if(IOS)
+  # The screen iOS shows before the first frame. Qt writes the plist key for it,
+  # which is why the storyboard is named here instead of just being copied in.
+  set_target_properties(appAscent PROPERTIES
+    QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/ios/LaunchScreen.storyboard")
+endif()
 
 # Development: copy QML next to the binary so edits do not need a rebuild.
 # For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
@@ -54,6 +87,21 @@ target_compile_definitions(appAscent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 target_link_libraries(appAscent PRIVATE AscentCore Felgo)
+
+if(APPLE AND NOT IOS)
+  # The linker signs the executable ad hoc, and everything copied into the bundle
+  # afterwards - the icon, the QML, the assets - lands outside that signature.
+  # macOS then reads the bundle as one whose resources have gone missing and
+  # declines to trust it, which it shows by refusing to use its icon.
+  #
+  # Registered after the copy steps so it is the last thing that runs. Editing
+  # the deployed QML by hand invalidates it again, which costs nothing but the
+  # icon until the next build.
+  add_custom_command(TARGET appAscent POST_BUILD
+    COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:appAscent>"
+    COMMENT "Signing the bundle so macOS accepts its resources"
+    VERBATIM)
+endif()
 
 # The tutorial is generated on demand: cmake --build . --target docs
 # It is kept out of the default build so a documentation warning cannot break a
