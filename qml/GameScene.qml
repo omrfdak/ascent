@@ -9,6 +9,15 @@ import Ascent
 Item {
   id: root
 
+  Balloon {
+    id: balloon
+
+    x: (root.width - width) / 2
+    y: _.groundY - _.riseProgress * _.travel
+    visible: Rounds.engine.state !== RoundEngine.Crashed
+    riseProgress: _.riseProgress
+  }
+
   Column {
     id: readout
 
@@ -61,6 +70,16 @@ Item {
 
   QtObject {
     id: _
+
+    readonly property real groundY: root.height - balloon.height - 24
+    readonly property real travel: _.groundY - 24
+
+    // The multiplier has no ceiling but the scene does. Reading the height off
+    // the logarithm means every scale gets its own stretch of sky: 2x is a third
+    // of the way up, 10x two thirds, 1000x still climbing. A balloon pinned to
+    // the top while the number keeps running would be a dead screen at exactly
+    // the moment the round is worth watching.
+    readonly property real riseProgress: 1 - 1 / (1 + 0.9 * Math.log(Rounds.engine.multiplier))
 
     readonly property color climbingColor: Qt.rgba(0.55, 0.95, 0.65, 1)
     readonly property color crashedColor: Qt.rgba(0.95, 0.35, 0.4, 1)
