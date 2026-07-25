@@ -1,0 +1,13 @@
+//! [chapters]
+\section1 Tutorial Chapters
+
+\list 1
+    \li \l {Ascent}{Overview}
+    \li \l {Project Setup and the Game Loop}
+    \li \l {Provably Fair Randomness}
+    \li \l {The Round State Machine}
+    \li \l {Juice}
+    \li \l {Persistence, Stats and Shipping}
+    \li \l {Further Perspectives}
+\endlist
+//! [chapters]

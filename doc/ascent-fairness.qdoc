@@ -1,0 +1,16 @@
+/*!
+    \page ascent-fairness.html
+    \title Provably Fair Randomness
+    \previouspage Project Setup and the Game Loop
+    \nextpage The Round State Machine
+
+    \section1 Why a Random Number Is Not Enough
+
+    \section1 Commit and Reveal
+
+    \section1 Turning a Seed into a Crash Point
+
+    \section1 Letting the Player Check the Round
+
+    \include includes/chapters.qdocinc chapters
+*/

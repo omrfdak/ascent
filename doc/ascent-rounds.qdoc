@@ -1,0 +1,16 @@
+/*!
+    \page ascent-rounds.html
+    \title The Round State Machine
+    \previouspage Provably Fair Randomness
+    \nextpage Juice
+
+    \section1 The Four States of a Round
+
+    \section1 Placing a Bet
+
+    \section1 Cashing Out Before the Pop
+
+    \section1 Where C++ Ends and QML Begins
+
+    \include includes/chapters.qdocinc chapters
+*/

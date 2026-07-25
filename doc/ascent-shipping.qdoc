@@ -1,0 +1,16 @@
+/*!
+    \page ascent-shipping.html
+    \title Persistence, Stats and Shipping
+    \previouspage Juice
+    \nextpage Further Perspectives
+
+    \section1 Remembering the Balance Between Sessions
+
+    \section1 The Stats Panel
+
+    \section1 Running on iOS
+
+    \section1 Building for Publishing
+
+    \include includes/chapters.qdocinc chapters
+*/

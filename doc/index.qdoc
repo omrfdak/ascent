@@ -1,6 +1,7 @@
 /*!
     \page index.html
     \title Ascent
+    \nextpage Project Setup and the Game Loop
 
     \e {Casino · 25 min · Intermediate}
 
@@ -13,4 +14,10 @@
     something you could publish - including the part most crash games gloss over:
     proving to the player that the outcome was fixed before the round started and
     was never influenced by their bet.
+
+    \section1 What You Will Build
+
+    \section1 Which Pieces the Game Needs
+
+    \include includes/chapters.qdocinc chapters
 */

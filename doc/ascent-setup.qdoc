@@ -1,0 +1,16 @@
+/*!
+    \page ascent-setup.html
+    \title Project Setup and the Game Loop
+    \previouspage Ascent
+    \nextpage Provably Fair Randomness
+
+    \section1 Creating the Project
+
+    \section1 The Game Window and the Scene
+
+    \section1 From Elapsed Time to a Multiplier
+
+    \section1 Handling the Felgo Splash Screen
+
+    \include includes/chapters.qdocinc chapters
+*/

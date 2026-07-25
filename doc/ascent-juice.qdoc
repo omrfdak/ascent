@@ -1,0 +1,14 @@
+/*!
+    \page ascent-juice.html
+    \title Juice
+    \previouspage The Round State Machine
+    \nextpage Persistence, Stats and Shipping
+
+    \section1 Animating the Balloon
+
+    \section1 Popping It with Particles
+
+    \section1 Sound and Screen Shake
+
+    \include includes/chapters.qdocinc chapters
+*/
