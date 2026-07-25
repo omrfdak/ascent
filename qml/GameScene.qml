@@ -43,13 +43,10 @@ Item {
     anchors.centerIn: parent
     spacing: 12
 
-    Text {
+    MultiplierReadout {
       id: multiplierLabel
 
       anchors.horizontalCenter: parent.horizontalCenter
-      text: qsTr("%1x").arg(Rounds.engine.multiplier.toFixed(2))
-      color: _.multiplierColor
-      font.pixelSize: 64
     }
 
     Text {
@@ -157,15 +154,6 @@ Item {
     readonly property color climbingColor: Qt.rgba(0.55, 0.95, 0.65, 1)
     readonly property color crashedColor: Qt.rgba(0.95, 0.35, 0.4, 1)
     readonly property color restingColor: Qt.rgba(1, 1, 1, 1)
-
-    readonly property color multiplierColor: {
-      if (Rounds.engine.state === RoundEngine.Running)
-        return _.climbingColor
-
-      return Rounds.engine.state === RoundEngine.Betting
-        ? _.restingColor
-        : _.crashedColor
-    }
 
     readonly property string stateText: {
       switch (Rounds.engine.state) {
