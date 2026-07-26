@@ -1,0 +1,270 @@
+/*
+ * The tutorial's own stylesheet. qdoc ships no styling of its own, and the
+ * pages it writes are readable but shapeless, so this is the whole of the
+ * design.
+ *
+ * The palette is the game's, taken from Style.qml: the same night sky, the
+ * same green, the same red for the moment a round ends. A tutorial about a
+ * dark game that opens as a white page reads as documentation about some
+ * other program.
+ */
+
+:root {
+  --sky: #050814;
+  --sky-far: #0b1024;
+  --surface: #171c33;
+  --surface-lit: #1d2440;
+  --hairline: rgba(255, 255, 255, 0.09);
+
+  --text: #eef2fb;
+  --muted: #8fa3d0;
+  --faint: #7885a3;
+
+  --accent: #38bf80;
+  --crashed: #f25966;
+
+  --measure: 44rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The page is one column, and it is body itself: the generator writes every
+   block as a direct child of body with no wrapper to hang a width on. */
+body {
+  max-width: calc(var(--measure) + 3rem);
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 5rem;
+  background: linear-gradient(180deg, var(--sky) 0%, var(--sky-far) 100%) fixed;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The breadcrumb arrives as two bare list items with no list around them.
+   Inline is what puts them on one line, and it is also what keeps them from
+   being read as a list of two things to go and do. */
+body > li {
+  display: inline;
+  list-style: none;
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+
+body > li + li::before {
+  content: " › ";
+  color: var(--hairline);
+}
+
+h1.title {
+  margin: 1.25rem 0 2.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 2.4rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 3.5rem 0 1rem;
+  font-size: 1.5rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 1.15rem;
+  color: var(--muted);
+}
+
+p {
+  margin: 0 0 1.25rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Inline code sits inside a sentence, so it stays the weight of the sentence
+   and is marked only by colour and spacing. */
+code, tt, .type, .name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+p code, p tt, li code, li tt {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--surface);
+  color: #b9e6cf;
+}
+
+pre {
+  margin: 1.75rem 0 2rem;
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+pre .comment {
+  color: var(--faint);
+  font-style: italic;
+}
+
+pre .string {
+  color: #9fd8a8;
+}
+
+pre .number {
+  color: #f2c46a;
+}
+
+pre .type {
+  color: #8fd0ff;
+}
+
+pre .keyword {
+  color: #c79cf0;
+}
+
+pre .preprocessor {
+  color: var(--muted);
+}
+
+pre .operator {
+  color: var(--muted);
+}
+
+/* Screenshots are phone-shaped and small, so they are shown at their own size
+   rather than stretched across the column. */
+p.centerAlign {
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+ul, ol {
+  margin: 0 0 1.5rem;
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+/* The table of contents the generator writes ahead of the title. Boxed and set
+   quiet: it is a map of the page, not part of it. */
+div.sidebar {
+  margin: 0 0 2.5rem;
+  padding: 1rem 1.5rem;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: rgba(23, 28, 51, 0.55);
+  font-size: 0.95rem;
+}
+
+div.sidebar h3 {
+  margin: 0 0 0.5rem;
+  color: var(--faint);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+div.sidebar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+div.sidebar li {
+  margin-bottom: 0.3rem;
+}
+
+div.sidebar li.level2 {
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+div.sidebar a {
+  color: var(--muted);
+}
+
+div.sidebar a:hover {
+  color: var(--accent);
+}
+
+/* Previous and next, at both ends of every page. */
+p.naviNextPrevious {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+p.headerNavi {
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+p.footerNavi {
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--hairline);
+}
+
+a.prevPage::before {
+  content: "← ";
+  color: var(--faint);
+}
+
+a.nextPage::after {
+  content: " →";
+  color: var(--faint);
+}
+
+/* A page with only one neighbour still puts it on the correct side. */
+p.naviNextPrevious > a.nextPage:only-child {
+  margin-left: auto;
+}
+
+@media (max-width: 40rem) {
+  body {
+    padding: 2rem 1.1rem 3.5rem;
+    font-size: 16px;
+  }
+
+  h1.title {
+    font-size: 1.9rem;
+  }
+
+  pre {
+    font-size: 0.8rem;
+  }
+}

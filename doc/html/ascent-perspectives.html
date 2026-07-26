@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-perspectives.qdoc -->
+  <title>Further Perspectives | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>Further Perspectives</li>
+  <link rel="prev" href="ascent-shipping.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="ascent-shipping.html">Persistence, Stats and Shipping</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#making-it-multiplayer">Making It Multiplayer</a></li>
+<li class="level1"><a href="#leaderboards-and-achievements">Leaderboards and Achievements</a></li>
+<li class="level1"><a href="#theming-the-game">Theming the Game</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">Further Perspectives</h1>
+<!-- $$$ascent-perspectives.html-description -->
+<div class="descr" id="details">
+<p>The game is finished, in the sense that it can be played and shipped. This last chapter is about the three directions it most obviously grows in, and what in the design was left ready for them.</p>
+<h2 id="making-it-multiplayer">Making It Multiplayer</h2>
+<p>A crash game is a multiplayer game that happens to be playable alone. Everyone in a round watches the same balloon and decides independently when to get out, and the tension of seeing other players cash out above you is most of what the genre is for.</p>
+<p>The seam for that was cut back in <a href="ascent-rounds.html">The Round State Machine</a>, where the indirection was described as ceremony that would earn its keep here. The game screen talks to <code translate="no">RoundSource</code>, an abstract class, and never to the thing behind it:</p>
+<pre class="cpp" translate="no"><span class="comment">// Starts and stops the cycle of rounds.</span>
+Q_INVOKABLE <span class="keyword">virtual</span> <span class="type">void</span> start() <span class="operator">=</span> <span class="number">0</span>;
+Q_INVOKABLE <span class="keyword">virtual</span> <span class="type">void</span> stop() <span class="operator">=</span> <span class="number">0</span>;
+
+Q_INVOKABLE <span class="keyword">virtual</span> <span class="type">void</span> requestBet(<span class="type">qreal</span> amount) <span class="operator">=</span> <span class="number">0</span>;
+Q_INVOKABLE <span class="keyword">virtual</span> <span class="type">void</span> requestCashOut() <span class="operator">=</span> <span class="number">0</span>;
+
+<span class="keyword">signals</span>:
+<span class="comment">// The hash of the seed that decides this round, published before any bet.</span>
+<span class="type">void</span> bettingOpened(<span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>commitment<span class="operator">,</span> <span class="type">int</span> windowMs);
+
+<span class="type">void</span> roundStarted();
+
+<span class="comment">// The seed behind the commitment, revealed now that it cannot be abused.</span>
+<span class="type">void</span> roundCrashed(<span class="type">qreal</span> crashPoint<span class="operator">,</span> <span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>revealedSeed);
+
+<span class="type">void</span> betAccepted(<span class="type">qreal</span> amount);
+<span class="type">void</span> betRejected(<span class="type">qreal</span> amount);
+
+<span class="type">void</span> cashOutConfirmed(<span class="type">qreal</span> payout<span class="operator">,</span> <span class="type">qreal</span> multiplier);
+<span class="type">void</span> cashOutRejected();</pre>
+<p>Two properties of that interface are what make the swap possible, and both were chosen for it. Nothing returns a value - a bet is a request, and the answer arrives as <code translate="no">betAccepted</code> or <code translate="no">betRejected</code> - so a source that has to ask a server looks no different to the screen than one that decides immediately. And the round's timing is announced rather than asked for: <code translate="no">bettingOpened</code> and <code translate="no">roundStarted</code> are how the screen learns where it is, which is exactly the shape of a message arriving over a socket.</p>
+<p>A <code translate="no">RemoteRoundSource</code> would implement the same five methods over a WebSocket and emit the same signals when the server's messages arrive. <code translate="no">main.cpp</code> constructs one instead of a <code translate="no">LocalRoundSource</code>, and no QML changes at all.</p>
+<p>The fairness scheme is already the multiplayer one. Committing to a hash before betting opens and revealing the seed after the crash is not a ceremony a single-player game needs - the device could simply roll a number - it is how a server proves to players it cannot see that it did not move the crash point after seeing the bets. Running it locally makes the mechanism demonstrable now and leaves nothing to redesign later.</p>
+<p>What would need real thought is what the wallet becomes. Points on the device are a number in SQLite; points on a server are a number the client must stop being the authority on, and the client's copy becomes a display of the server's balance rather than the balance itself.</p>
+<h2 id="leaderboards-and-achievements">Leaderboards and Achievements</h2>
+<p>The statistics already exist and are already being counted in the right place - <code translate="no">PlayerStats</code> watches the round source, not the screen, so it counts what happened rather than what was drawn. A leaderboard is those same numbers, sent somewhere.</p>
+<p>Felgo ships this rather than leaving it to be built: the Game Network plugin provides leaderboards, achievements and the user accounts underneath them, with QML types that drop into a scene. The work is not the leaderboard, it is deciding what to rank people by. Highest multiplier cashed out is the obvious one and the wrong one - it rewards a single lucky round and nothing else. Best streak is better, because a streak is a run of decisions. Total profit is better still, and immediately raises the question of what stops a player from resetting their wallet, which is a server-side question and belongs with the one above.</p>
+<p>Achievements are cheaper and land sooner: cash out above 10x, win five in a row, play a hundred rounds. Each of them is a condition on a counter that <code translate="no">PlayerStats</code> already keeps.</p>
+<h2 id="theming-the-game">Theming the Game</h2>
+<p>Everything the interface is drawn from is in one file:</p>
+<pre class="qml" translate="no"><span class="comment">// Seven sizes, each far enough from the next that two of them beside each</span>
+<span class="comment">// other cannot be mistaken for one size drawn twice. Anything that needs a</span>
+<span class="comment">// size not on this list is either shouting or hiding.</span>
+readonly property <span class="type">int</span> <span class="name">displaySize</span>: <span class="number">56</span>
+readonly property <span class="type">int</span> <span class="name">titleSize</span>: <span class="number">48</span>
+readonly property <span class="type">int</span> <span class="name">headingSize</span>: <span class="number">18</span>
+readonly property <span class="type">int</span> <span class="name">bodySize</span>: <span class="number">16</span>
+readonly property <span class="type">int</span> <span class="name">labelSize</span>: <span class="number">14</span>
+readonly property <span class="type">int</span> <span class="name">captionSize</span>: <span class="number">12</span>
+readonly property <span class="type">int</span> <span class="name">fineSize</span>: <span class="number">10</span></pre>
+<p class="centerAlign"><img src="images/ascent-menu.png" alt="The menu, drawn entirely from Style: one accent colour, one surface, and three sizes of text" /></p><p>No interface colour and no font size is written anywhere else in the QML - which means a second theme is a second <code translate="no">Style</code>, not a search through twenty files. A daytime sky, a paper theme, a high-contrast one for players who need it: each is a set of values, and the layout does not know which one it is drawing.</p>
+<p>There is a deliberate exception, and it is the more interesting half of the idea. The sky, the balloon and the sparks keep their colours where they are drawn. Those are pictures rather than interface, and a picture's colours are chosen against each other - the balloon against the sky it hangs in - rather than against the rest of the screen. Pulling them into the theme file would make them themeable and make them wrong.</p>
+<p>The type scale is worth reusing whatever else changes. Seven sizes, each far enough from the next that two of them side by side read as a deliberate difference rather than a mistake. Most interfaces that look untidy are interfaces with eleven sizes in them, four of which differ by a point.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-perspectives.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="ascent-shipping.html">Persistence, Stats and Shipping</a>
+</p>
+</body>
+</html>

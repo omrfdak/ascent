@@ -13,5 +13,7 @@ CMakeLists.txt.user*
 # macOS
 .DS_Store
 
-# Generated documentation — committed deliberately before submission
-doc/html/
+# The generated tutorial is committed, apart from qdoc's cross-reference index:
+# that one is for linking other documentation projects against this one, and is
+# not part of what a reader ever opens.
+doc/html/*.index

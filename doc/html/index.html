@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- index.qdoc -->
+  <title>Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+  <link rel="next" href="ascent-setup.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="nextPage" href="ascent-setup.html">Project Setup and the Game Loop</a>
+</p>
+<h1 class="title">Ascent</h1>
+<!-- $$$index.html-description -->
+<div class="descr" id="details">
+<p><i>Casino · 25 min · Intermediate</i></p>
+<p>Ascent is a crash game: a balloon rises, a multiplier climbs with it, and at a moment nobody can predict the balloon pops. Cash out before it does and you keep your bet times the multiplier. Wait one tick too long and you keep nothing.</p>
+<p>It is a deceptively small game to describe and a surprisingly interesting one to build, because the fun lives entirely in a number going up and in the player's nerve running out. There is no enemy to fight and no level to design. There is a curve, a clock, and a button.</p>
+<p class="centerAlign"><img src="images/ascent-climbing.png" alt="A round in progress: the multiplier climbing, the balloon rising, and the button offering what cashing out is worth right now" /></p><h2 id="what-you-will-build">What You Will Build</h2>
+<p>By the end of this tutorial you will have a complete, publishable Felgo game: a balloon that rises with the multiplier, a betting window that opens and closes on its own, particles when the round pops, sound, persistent points, statistics, and a build that runs on both macOS and iOS.</p>
+<p>You will also have built the part most crash games keep quiet about. Before each round starts, Ascent shows you the SHA-256 hash of the seed that decides where the balloon pops. When the round is over it reveals the seed. Anyone can hash it, compare it to what they were shown, and recompute the crash point themselves. The game cannot change its mind after seeing your bet, and you cannot read the outcome out of the hash. This is called a provably fair scheme, and it is the reason the architecture in this tutorial looks the way it does.</p>
+<h2 id="which-pieces-the-game-needs">Which Pieces the Game Needs</h2>
+<p>Before writing anything, it is worth listing what a round actually consists of. Take a moment to guess before reading on - it is a short list, and the shape of the code follows directly from it.</p>
+<ul>
+<li>Something that turns elapsed time into a multiplier. A curve, not a counter: the payout has to accelerate, otherwise waiting is free.</li>
+<li>Something that decides where the round pops, before the round starts, and can prove afterwards that it did not cheat.</li>
+<li>Something that owns the player's points and the rules around them - minimum bet, maximum bet, what a payout is worth.</li>
+<li>Something that knows which of those actions are legal right now. Betting mid-round is not, cashing out twice is not, cashing out after the pop is definitely not.</li>
+<li>And on top of all of that, the part the player actually sees: a balloon, a number, a button, and enough noise and motion to make a number going up feel like something is at stake.</li>
+</ul>
+<p>The first four are plain C++ with no idea that Felgo or QML exist, which is what makes them testable. The last one is QML, where Felgo does the heavy lifting. Every chapter below builds one of those pieces and then shows it on screen.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@index.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="nextPage" href="ascent-setup.html">Project Setup and the Game Loop</a>
+</p>
+</body>
+</html>

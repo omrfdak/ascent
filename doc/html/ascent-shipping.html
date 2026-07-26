@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-shipping.qdoc -->
+  <title>Persistence, Stats and Shipping | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>Persistence, Stats and Shipping</li>
+  <link rel="prev" href="ascent-juice.html" />
+  <link rel="next" href="ascent-perspectives.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="ascent-juice.html">Juice</a>
+<a class="nextPage" href="ascent-perspectives.html">Further Perspectives</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#remembering-the-balance-between-sessions">Remembering the Balance Between Sessions</a></li>
+<li class="level1"><a href="#counting-what-the-player-did">Counting What the Player Did</a></li>
+<li class="level1"><a href="#a-setting-that-has-to-be-exact">A Setting That Has To Be Exact</a></li>
+<li class="level1"><a href="#the-strip-and-checking-it">The Strip, and Checking It</a></li>
+<li class="level1"><a href="#running-on-ios">Running on iOS</a></li>
+<li class="level2"><a href="#the-simulator-and-why-the-phone-is-the-test">The Simulator, and Why the Phone Is the Test</a></li>
+<li class="level1"><a href="#building-for-publishing">Building for Publishing</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">Persistence, Stats and Shipping</h1>
+<!-- $$$ascent-shipping.html-description -->
+<div class="descr" id="details">
+<p>A game that forgets everything when it closes is a demo. This chapter is about the parts that survive the app being killed, and about the numbers a player wants to see once they have played more than one round.</p>
+<h2 id="remembering-the-balance-between-sessions">Remembering the Balance Between Sessions</h2>
+<p>Two values have to outlive the process: the balance and the statistics. Felgo's <code translate="no">Storage</code> is a key-value store over SQLite, which is the right size of tool for two keys.</p>
+<pre class="qml" translate="no"><span class="type">Storage</span> {
+  <span class="name">id</span>: <span class="name">storage</span>
+
+  <span class="name">databaseName</span>: <span class="string">&quot;ascent&quot;</span>
+
+  <span class="comment">// Felgo's Storage answers with undefined for a key that was never written,</span>
+  <span class="comment">// which is what a first launch looks like: the wallet keeps the balance it</span>
+  <span class="comment">// was built with and the statistics stay empty.</span>
+  <span class="name">Component</span>.onCompleted: {
+    <span class="name">PlayerWallet</span>.<span class="name">restore</span>(<span class="name">storage</span>.<span class="name">getValue</span>(<span class="string">&quot;balance&quot;</span>) <span class="operator">||</span> <span class="number">0</span>)
+    <span class="name">PlayerStats</span>.<span class="name">restore</span>(<span class="name">storage</span>.<span class="name">getValue</span>(<span class="string">&quot;stats&quot;</span>) <span class="operator">||</span> ({}))
+    <span class="name">Rounds</span>.<span class="name">engine</span>.<span class="name">autoCashOutAt</span> <span class="operator">=</span> <span class="name">storage</span>.<span class="name">getValue</span>(<span class="string">&quot;autoCashOutAt&quot;</span>) <span class="operator">||</span> <span class="number">0</span>
+  }
+}</pre>
+<p>The interesting part is what a first launch looks like. Storage answers with <code translate="no">undefined</code> for a key that was never written, and <code translate="no">undefined</code> is exactly what should land the player on a fresh wallet - so there is no separate &quot;have I run before&quot; flag to keep in step with the data it describes.</p>
+<p>The wallet decides what to do with what it is handed:</p>
+<pre class="cpp" translate="no"><span class="type">void</span> Wallet<span class="operator">::</span>restore(<span class="type">qreal</span> balance)
+{
+  <span class="keyword">if</span> (balance <span class="operator">&lt;</span><span class="operator">=</span> <span class="number">0.0</span>)
+    <span class="keyword">return</span>;
+
+  m_balance <span class="operator">=</span> toPoints(balance);
+  <span class="keyword">emit</span> balanceChanged();
+}</pre>
+<p>A balance of zero or less is not restored. A hand-edited database, a key that was never written, a half-finished write - all of them leave the wallet on the balance it was constructed with, which is what a new player gets. Restoring a nonsensical balance would be worse than ignoring it.</p>
+<p>Writing happens on the signal, not on a timer and not on shutdown:</p>
+<pre class="cpp" translate="no">Connections {
+  target: PlayerWallet
+
+  function onBalanceChanged() {
+    storage<span class="operator">.</span>setValue(<span class="string">&quot;balance&quot;</span><span class="operator">,</span> PlayerWallet<span class="operator">.</span>balance)
+  }
+}</pre>
+<p>That has a consequence worth stating out loud: a bet is deducted and written the moment it is accepted, so force-quitting mid-round does not get the stake back. That is not a bug to fix later - a game that let a player escape a losing round by killing the app would be a game with no losing rounds.</p>
+<h2 id="counting-what-the-player-did">Counting What the Player Did</h2>
+<p>The statistics watch the round source rather than being told by the screen.</p>
+<pre class="cpp" translate="no"><span class="type">void</span> PlayerStats<span class="operator">::</span>onRoundCrashed()
+{
+  <span class="keyword">if</span> (m_stakeInPlay <span class="operator">&lt;</span><span class="operator">=</span> <span class="number">0.0</span>)
+    <span class="keyword">return</span>;
+
+  <span class="operator">+</span><span class="operator">+</span>m_roundsPlayed;
+
+  <span class="keyword">if</span> (m_cashedOutThisRound) {
+    <span class="operator">+</span><span class="operator">+</span>m_roundsWon;
+    <span class="operator">+</span><span class="operator">+</span>m_currentStreak;
+    m_bestStreak <span class="operator">=</span> qMax(m_bestStreak<span class="operator">,</span> m_currentStreak);
+  } <span class="keyword">else</span> {
+    m_currentStreak <span class="operator">=</span> <span class="number">0</span>;
+  }
+
+  m_stakeInPlay <span class="operator">=</span> <span class="number">0.0</span>;
+  m_cashedOutThisRound <span class="operator">=</span> <span class="keyword">false</span>;
+
+  <span class="keyword">emit</span> statsChanged();
+}</pre>
+<p>Three decisions are visible in those few lines.</p>
+<p>A round with no stake in it is not counted at all. Watching a round costs nothing and proves nothing, and counting it would turn every statistic into a measure of how long the app was left open.</p>
+<p>A round is counted when it ends, not when it starts. Until the balloon pops the round is neither won nor lost, so there is nothing to record.</p>
+<p>And the streak is reset rather than decremented. A streak is a run of wins, so one loss ends it - while <code translate="no">bestStreak</code> keeps what the run was worth.</p>
+<p class="centerAlign"><img src="images/ascent-stats.png" alt="What eight rounds look like from the player's side" /></p><p>Saving is one map rather than seven keys:</p>
+<pre class="cpp" translate="no"><span class="type">QVariantMap</span> PlayerStats<span class="operator">::</span>save() <span class="keyword">const</span>
+{
+  <span class="keyword">return</span> { { <span class="type">QStringLiteral</span>(<span class="string">&quot;roundsPlayed&quot;</span>)<span class="operator">,</span> m_roundsPlayed }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;roundsWon&quot;</span>)<span class="operator">,</span> m_roundsWon }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;bestMultiplier&quot;</span>)<span class="operator">,</span> m_bestMultiplier }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;currentStreak&quot;</span>)<span class="operator">,</span> m_currentStreak }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;bestStreak&quot;</span>)<span class="operator">,</span> m_bestStreak }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;totalWagered&quot;</span>)<span class="operator">,</span> m_totalWagered }<span class="operator">,</span>
+           { <span class="type">QStringLiteral</span>(<span class="string">&quot;totalReturned&quot;</span>)<span class="operator">,</span> m_totalReturned } };
+}
+
+<span class="type">void</span> PlayerStats<span class="operator">::</span>restore(<span class="keyword">const</span> <span class="type">QVariantMap</span> <span class="operator">&amp;</span>saved)
+{
+  <span class="comment">// Every key falls back to the value a new player starts with, so a save from</span>
+  <span class="comment">// an older build that never knew about a statistic still loads.</span>
+  m_roundsPlayed <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;roundsPlayed&quot;</span>)<span class="operator">,</span> <span class="number">0</span>)<span class="operator">.</span>toInt();
+  m_roundsWon <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;roundsWon&quot;</span>)<span class="operator">,</span> <span class="number">0</span>)<span class="operator">.</span>toInt();
+  m_bestMultiplier <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;bestMultiplier&quot;</span>)<span class="operator">,</span> <span class="number">0.0</span>)<span class="operator">.</span>toReal();
+  m_currentStreak <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;currentStreak&quot;</span>)<span class="operator">,</span> <span class="number">0</span>)<span class="operator">.</span>toInt();
+  m_bestStreak <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;bestStreak&quot;</span>)<span class="operator">,</span> <span class="number">0</span>)<span class="operator">.</span>toInt();
+  m_totalWagered <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;totalWagered&quot;</span>)<span class="operator">,</span> <span class="number">0.0</span>)<span class="operator">.</span>toReal();
+  m_totalReturned <span class="operator">=</span> saved<span class="operator">.</span>value(<span class="type">QStringLiteral</span>(<span class="string">&quot;totalReturned&quot;</span>)<span class="operator">,</span> <span class="number">0.0</span>)<span class="operator">.</span>toReal();
+
+  <span class="keyword">emit</span> statsChanged();
+}</pre>
+<p>Every field falls back to what a new player starts with. A save written by a build that had never heard of a particular statistic still loads, and the missing value reads as &quot;none yet&quot; instead of as a failure.</p>
+<h2 id="a-setting-that-has-to-be-exact">A Setting That Has To Be Exact</h2>
+<p>An automatic cash out is a standing instruction: take the money at this multiplier whether or not anyone is watching. The engine handles it in the one place the crash point is also pinned.</p>
+<pre class="cpp" translate="no"><span class="type">void</span> RoundEngine<span class="operator">::</span>takeTheMoneyAtTheTarget(<span class="type">qreal</span> shown)
+{
+  <span class="comment">// A target at or above the crash point is a target this round never reaches.</span>
+  <span class="comment">// Setting it to exactly where the balloon pops loses, the same as a tap at</span>
+  <span class="comment">// that moment would have: the multiplier reads one step short and then it is</span>
+  <span class="comment">// over.</span>
+  <span class="keyword">if</span> (m_autoCashOutAt <span class="operator">&lt;</span><span class="operator">=</span> <span class="number">0.0</span> <span class="operator">|</span><span class="operator">|</span> m_autoCashOutAt <span class="operator">&gt;</span><span class="operator">=</span> m_crashPoint)
+    <span class="keyword">return</span>;
+
+  <span class="keyword">if</span> (shown <span class="operator">&lt;</span> m_autoCashOutAt)
+    <span class="keyword">return</span>;
+
+  <span class="comment">// Pinned to the target, the same way a crash is pinned to the committed</span>
+  <span class="comment">// point. A 16 ms clock lands somewhere past the threshold, and paying at</span>
+  <span class="comment">// wherever it landed would make the setting a suggestion.</span>
+  setMultiplier(m_autoCashOutAt);
+  cashOut();
+}</pre>
+<p>A 16 ms clock never lands on the threshold. It lands somewhere past it, and paying at wherever it landed would make the setting a suggestion - so the multiplier is pinned to the target, exactly as a crash is pinned to the committed point.</p>
+<p>Two rules follow from where this sits in <code translate="no">advanceTo</code>.</p>
+<p>Reaching the target on the same tick the balloon pops is a loss. A player tapping at that moment would have been too late as well: the number reads one step short and then the round is over. The setting does not get a better deal than a hand on the button.</p>
+<p>The target is settled <i>before</i> the crash even when a single tick covers both. That ordering is the whole reason it is written this way: a dropped frame - a hitch, a slow paint, a debugger pause - must not turn a win into a loss. The first version checked the crash first, and a test that advanced the round by a whole minute in one step caught it.</p>
+<h2 id="the-strip-and-checking-it">The Strip, and Checking It</h2>
+<p>The last ten rounds are kept for the strip along the top of the screen, and each one carries more than its multiplier:</p>
+<pre class="cpp" translate="no"><span class="type">void</span> RoundHistory<span class="operator">::</span>onRoundCrashed(<span class="type">qreal</span> crashPoint<span class="operator">,</span> <span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>revealedSeed)
+{
+  <span class="comment">// Newest first: the strip is read from the end the player's eye starts at.</span>
+  m_rounds<span class="operator">.</span>prepend(<span class="type">QVariantMap</span>{ { <span class="type">QStringLiteral</span>(<span class="string">&quot;multiplier&quot;</span>)<span class="operator">,</span> crashPoint }<span class="operator">,</span>
+                                { <span class="type">QStringLiteral</span>(<span class="string">&quot;commitment&quot;</span>)<span class="operator">,</span> m_commitment }<span class="operator">,</span>
+                                { <span class="type">QStringLiteral</span>(<span class="string">&quot;seed&quot;</span>)<span class="operator">,</span> revealedSeed } });
+
+  <span class="keyword">while</span> (m_rounds<span class="operator">.</span>size() <span class="operator">&gt;</span> Capacity)
+    m_rounds<span class="operator">.</span>removeLast();
+
+  <span class="keyword">emit</span> roundsChanged();
+}</pre>
+<p>The commitment and the revealed seed travel with the round, because a result that cannot be checked afterwards is just a number. That is what the verification screen promised in the fairness chapter reads from - and it re-derives the crash point from the seed every time the list is drawn rather than trusting a verdict stored next to the data it is meant to be checking.</p>
+<p class="centerAlign"><img src="images/ascent-verify.png" alt="The verification screen: each past round with its commitment, its revealed seed, and the crash point recomputed on the spot" /></p><p>One detail there is deliberate. The screen is handed the game's own <code translate="no">ProvablyFair</code> instance:</p>
+<pre class="cpp" translate="no">qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;Fairness&quot;</span><span class="operator">,</span> fair);</pre>
+<p>Not a second instance built for the occasion. Two copies could be configured differently - a different house edge is all it would take - and then the screen would be confirming a claim nobody made, with arithmetic the game does not use.</p>
+<p>Rounds are recorded whether or not they were bet on, which is the opposite of how the statistics work. The distinction is worth keeping: the strip is what the game did, and the statistics are what the player did.</p>
+<h2 id="running-on-ios">Running on iOS</h2>
+<p>Nothing in the game had to change to run on a phone. Everything that did change is in the build, and it is worth walking through, because most of it is Felgo and Qt each having an opinion about the same file.</p>
+<p>Felgo's iOS configuration points the bundle at <code translate="no">ios/Project-Info.plist</code> by name, whether or not that file exists, and looks for a launch screen called <code translate="no">ios/Launch Screen.storyboard</code> - with the space. Those two names are the convention: write files with those names and they are picked up, and any mechanism that wants to supply its own instead will be quietly overruled. Qt's <code translate="no">QT_IOS_LAUNCH_SCREEN</code> is one such mechanism. Left in, it generates a second storyboard and compiles it into the bundle alongside the real one, where it sits being ignored, because only the one the plist names is ever shown. Suppressing it is one line:</p>
+<pre class="cpp" translate="no">set(QT_NO_SET_DEFAULT_IOS_LAUNCH_SCREEN TRUE)</pre>
+<p>The plist itself is worth keeping short. Templates tend to arrive declaring a reason for the camera, the microphone, the photo library, contacts, Bluetooth and location. This game asks for none of them, and a usage string for a permission that is never requested is a question at review time with no answer behind it. What is left is the identity of the app, portrait orientation - the balloon rises, and landscape would letterbox the game into a strip - and the launch screen's name.</p>
+<p>One line in the same file had a longer story than it looks:</p>
+<pre class="cpp" translate="no"><span class="keyword">if</span>(APPLE AND NOT IOS AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET <span class="string">&quot;12.0&quot;</span> CACHE STRING <span class="string">&quot;&quot;</span> FORCE)
+endif()</pre>
+<p><code translate="no">CMAKE_OSX_DEPLOYMENT_TARGET</code> is not the Mac's variable. It is Apple's, and on an iOS build it becomes <code translate="no">IPHONEOS_DEPLOYMENT_TARGET</code> - so a macOS minimum of 12.0 set before <code translate="no">project()</code> left the iOS bundle claiming to run on iOS 12, which the Qt inside it cannot do. The guard keeps the number on the platform it was chosen for and lets Qt's own toolchain supply the iOS one, which is 16 and is not a number this project should be inventing.</p>
+<p>Sound needed a decision rather than a fix:</p>
+<pre class="cpp" translate="no">if(IOS)
+  # Qt's default media backend on iOS is its own build of ffmpeg, which Felgo
+  # ships as an xcframework with an arm64 simulator slice and no Intel one -
+  # while the Qt in the same kit has an Intel simulator slice and no arm64 one.
+  # The two cannot be linked together, so the simulator build fails on missing
+  # av_* symbols.
+  #
+  # The darwin backend has neither problem: it is AVFoundation, it is in both
+  # architectures, and it carries no bundled decoder into the app. The game only
+  # plays its own short sounds, which is what this backend is for.
+  qt_import_plugins(Ascent
+    INCLUDE_BY_TYPE multimedia Qt6::QDarwinMediaPlugin)
+endif()</pre>
+<p>Qt's default media backend on iOS is its own build of ffmpeg. Swapping it for AVFoundation is a smaller app and one less bundled decoder to ship, and a game that plays a handful of short effects loses nothing by it.</p>
+<h3 id="the-simulator-and-why-the-phone-is-the-test">The Simulator, and Why the Phone Is the Test</h3>
+<p>The Simulator did not work, and the reason is worth stating precisely, because it looks like a project error for a long time before it turns out not to be one.</p>
+<p>An iOS binary does not target an architecture. It targets an architecture <i>and</i> a platform - <code translate="no">arm64 + iOS</code> and <code translate="no">arm64 + iOS-simulator</code> are as different as arm64 and x86_64, and a linker will say so. Three such pairs matter on a Mac with Apple silicon, and the Felgo SDK ships two: the device slice is <code translate="no">arm64 + iOS</code>, and the simulator slice is <code translate="no">x86_64 + iOS-simulator</code>, from the era when simulators ran Intel code. The modern simulator runtime accepts <code translate="no">arm64</code> only. So the arm64 simulator build fails to link - <code translate="no">building for 'iOS-simulator', but linking in object file built for 'iOS'</code> - and the x86_64 build links but will not install.</p>
+<p>The phone is unaffected, because the pair the phone wants is the pair the SDK has. That is the whole of it, and knowing it early would have saved a day: when a toolchain error mentions a platform and not just an architecture, check what pairs you actually have before assuming the build is misconfigured.</p>
+<p>Getting onto the device is then ordinary Apple ceremony, and free. A personal Apple ID in Xcode is enough for a Personal Team, which signs apps that run for seven days. Two of the steps have to happen on the phone itself: enabling Developer Mode under Settings &gt; Privacy &amp; Security, which reboots it, and trusting the certificate under Settings &gt; General &gt; VPN &amp; Device Management, without which the app installs and then refuses to launch.</p>
+<h2 id="building-for-publishing">Building for Publishing</h2>
+<p>The game has been running all this way on files copied next to the binary:</p>
+<pre class="cpp" translate="no"># Development: copy QML next to the binary so edits do not need a rebuild.
+# For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
+# which compiles the QML into the binary.
+deploy_resources(&quot;${QmlFiles};${AssetsFiles}&quot;)
+
+qt_add_qml_module(Ascent
+    URI Ascent
+    VERSION 1.0
+# uncomment for publishing:
+#    QML_FILES ${QmlFiles}
+#    RESOURCES ${AssetsFiles}
+    NO_RESOURCE_TARGET_PATH
+)</pre>
+<p>That is the arrangement to develop in. A QML edit is picked up by restarting the app rather than by rebuilding it, and on a game where most of the work is tuning numbers until something feels right, that difference is most of the day.</p>
+<p>It is also not something to ship. Deployed files are files: they are visible in the bundle, editable in place, and loaded from a path that has to be correct at runtime. The publishing configuration compiles the QML into the binary instead - comment out <code translate="no">deploy_resources</code>, uncomment <code translate="no">QML_FILES</code> and <code translate="no">RESOURCES</code>, and point the entry at the resource system:</p>
+<pre class="cpp" translate="no">felgo<span class="operator">.</span>setMainQmlFileName(<span class="type">QStringLiteral</span>(<span class="string">&quot;qrc:/qml/AscentMain.qml&quot;</span>));</pre>
+<p><code translate="no">PRODUCT_STAGE</code> moves from <code translate="no">test</code> to <code translate="no">publish</code> at the same time, and the license key stops being optional if you want the Felgo splash screen gone.</p>
+<p>On macOS there is one more thing, and it is the kind of problem that presents itself as something else entirely: the app's icon stops appearing. Not a missing icon - the file is in the bundle, correctly named, correctly referenced. The bundle is simply no longer trusted.</p>
+<pre class="cpp" translate="no">if(APPLE AND NOT IOS)
+  # The linker signs the executable ad hoc, and everything copied into the bundle
+  # afterwards - the icon, the QML, the assets - lands outside that signature.
+  # macOS then reads the bundle as one whose resources have gone missing and
+  # declines to trust it, which it shows by refusing to use its icon.
+  #
+  # A target of its own rather than a POST_BUILD step, because a POST_BUILD step
+  # belongs to the link and a QML-only change does not relink: the file would be
+  # copied in, the signature would be left describing the file before it, and the
+  # icon would go missing on the one kind of build that happens most often. A
+  # target is always out of date, so this runs after every build, and it depends
+  # on the whole of Ascent so it runs after the copies rather than beside them.
+  add_custom_target(AscentSignature ALL
+    COMMAND codesign --force --sign - &quot;$&lt;TARGET_BUNDLE_DIR:Ascent&gt;&quot;
+    COMMENT &quot;Signing the bundle so macOS accepts its resources&quot;
+    VERBATIM)
+  add_dependencies(AscentSignature Ascent)
+endif()</pre>
+<p>The linker signs the executable ad hoc, and everything copied in afterwards - the icon, the QML, the assets - lands outside that signature. macOS reads the result as a bundle whose sealed resources have gone missing, and declines to use its icon, which is the only symptom you get.</p>
+<p>Why a target rather than the obvious <code translate="no">POST_BUILD</code> command: a <code translate="no">POST_BUILD</code> command belongs to the link step, and a QML-only change does not relink. The file gets copied in, the signature is left describing the bundle as it was before, and the icon disappears on exactly the kind of build that happens most often. A custom target is always out of date, so it runs every time.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-shipping.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="ascent-juice.html">Juice</a>
+<a class="nextPage" href="ascent-perspectives.html">Further Perspectives</a>
+</p>
+</body>
+</html>

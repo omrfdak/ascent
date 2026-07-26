@@ -140,6 +140,15 @@ find_program(QDOC_EXECUTABLE NAMES qdoc HINTS "${QtBinDir}")
 
 if(QDOC_EXECUTABLE)
   add_custom_target(docs
+    # qdoc refuses to write into a directory that already has something in it,
+    # so the previous run is cleared first. This also means a page that stops
+    # being generated stops existing, rather than lingering in the output as a
+    # file nothing links to any more.
+    #
+    # Spelled out in full rather than as "html", so that what is deleted is
+    # decided here and not by whatever the working directory happens to be.
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/doc/html"
     COMMAND ${QDOC_EXECUTABLE} ascent.qdocconf
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc
     COMMENT "Generating the tutorial with qdoc"

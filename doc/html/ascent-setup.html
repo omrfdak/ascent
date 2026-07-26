@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-setup.qdoc -->
+  <title>Project Setup and the Game Loop | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>Project Setup and the Game Loop</li>
+  <link rel="prev" href="index.html" />
+  <link rel="next" href="ascent-fairness.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="index.html">Ascent</a>
+<a class="nextPage" href="ascent-fairness.html">Provably Fair Randomness</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#creating-the-project">Creating the Project</a></li>
+<li class="level1"><a href="#the-game-window-and-the-scenes">The Game Window and the Scenes</a></li>
+<li class="level1"><a href="#switching-scenes">Switching Scenes</a></li>
+<li class="level1"><a href="#from-elapsed-time-to-a-multiplier">From Elapsed Time to a Multiplier</a></li>
+<li class="level1"><a href="#letting-qml-see-the-core">Letting QML See the Core</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">Project Setup and the Game Loop</h1>
+<!-- $$$ascent-setup.html-description -->
+<div class="descr" id="details">
+<p>This chapter gets a window on screen and the multiplier curve behind it. By the end you will have an empty but running Felgo game, a C++ class that turns a duration into a multiplier, and that class talking to QML.</p>
+<h2 id="creating-the-project">Creating the Project</h2>
+<p>Create a new Felgo project from Qt Creator's wizard, or start from an empty directory with a <code translate="no">CMakeLists.txt</code>. The Felgo-specific part of it is short:</p>
+<pre class="cpp" translate="no">find_package(Felgo REQUIRED)
+
+set(PRODUCT_IDENTIFIER &quot;com.merdak.ascent&quot;)
+set(PRODUCT_VERSION_NAME &quot;1.0.0&quot;)
+set(PRODUCT_VERSION_CODE 1)
+set(PRODUCT_STAGE &quot;test&quot;)
+set(PRODUCT_LICENSE_KEY &quot;&quot;)
+
+set(FELGO_PLUGINS
+)</pre>
+<p><code translate="no">find_package(Felgo)</code> brings in everything Felgo ships - the QML types, the plugins, the deployment helpers. The product variables underneath it are what end up in the app bundle: the identifier that identifies your app to the app stores, the version the store shows, and the license key. Leave the key empty while you build. It only removes the Felgo splash screen, and the splash screen turns out to be something we have to handle anyway.</p>
+<p><code translate="no">PRODUCT_STAGE</code> stays at <code translate="no">test</code> until the very end, when switching it to <code translate="no">publish</code> is part of preparing a release build.</p>
+<h2 id="the-game-window-and-the-scenes">The Game Window and the Scenes</h2>
+<p>A Felgo game starts with a <code translate="no">GameWindow</code> holding one or more scenes:</p>
+<pre class="qml" translate="no"><span class="type">GameWindow</span> {
+  <span class="name">id</span>: <span class="name">root</span>
+
+  <span class="comment">// Desktop window size. On mobile the scenes scale to the device screen</span>
+  <span class="comment">// instead.</span>
+  <span class="name">screenWidth</span>: <span class="number">480</span>
+  <span class="name">screenHeight</span>: <span class="number">720</span>
+
+  <span class="type">MenuScene</span> {
+    <span class="name">id</span>: <span class="name">menuScene</span>
+
+    <span class="name">onPlayRequested</span>: <span class="name">root</span>.<span class="name">state</span> <span class="operator">=</span> <span class="string">&quot;game&quot;</span>
+  }
+
+  <span class="type">GameScene</span> {
+    <span class="name">id</span>: <span class="name">gameScene</span>
+
+    <span class="name">onBackRequested</span>: <span class="name">root</span>.<span class="name">state</span> <span class="operator">=</span> <span class="string">&quot;menu&quot;</span>
+  }
+
+  <span class="type">GameAudio</span> {
+    <span class="name">id</span>: <span class="name">gameAudio</span>
+  }
+
+  <span class="type">SavedGame</span> {
+    <span class="name">id</span>: <span class="name">savedGame</span>
+  }
+
+  <span class="comment">// One scene visible at a time, and the window decides which. A scene asks to</span>
+  <span class="comment">// be left and does not name its successor, so the same scene can be reached</span>
+  <span class="comment">// from anywhere without knowing what came before it.</span>
+  <span class="comment">//</span>
+  <span class="comment">// The game opens on the game: rounds are already cycling, and a title screen</span>
+  <span class="comment">// between the player and the next one is a door with nothing behind it.</span>
+  <span class="name">state</span>: <span class="string">&quot;game&quot;</span>
+
+  <span class="name">states</span>: [
+    <span class="type">State</span> {
+      <span class="name">name</span>: <span class="string">&quot;menu&quot;</span>
+      <span class="type">PropertyChanges</span> { <span class="name">menuScene</span>.opacity: <span class="number">1</span> }
+      <span class="type">PropertyChanges</span> { <span class="name">root</span>.activeScene: <span class="name">menuScene</span> }
+    },
+    <span class="type">State</span> {
+      <span class="name">name</span>: <span class="string">&quot;game&quot;</span>
+      <span class="type">PropertyChanges</span> { <span class="name">gameScene</span>.opacity: <span class="number">1</span> }
+      <span class="type">PropertyChanges</span> { <span class="name">root</span>.activeScene: <span class="name">gameScene</span> }
+    }
+  ]
+
+  <span class="comment">// Not Component.onCompleted: on a free license the splash screen sits on top</span>
+  <span class="comment">// for a few seconds, and rounds cycling behind it would mean the player walks</span>
+  <span class="comment">// in on a bet they never had the chance to place.</span>
+  <span class="name">onSplashScreenFinished</span>: <span class="name">Rounds</span>.<span class="name">start</span>()
+}</pre>
+<p><code translate="no">GameWindow</code> is the application window, and <code translate="no">screenWidth</code> and <code translate="no">screenHeight</code> only decide how big it opens on a desktop - on a phone it fills the screen instead.</p>
+<p><code translate="no">Scene</code> is where resolution independence happens. You give it a logical size once and then position everything inside it in those coordinates forever; Felgo scales the scene to whatever display it lands on and letterboxes the remainder. Here that size is given once, in a <code translate="no">SceneBase</code> every scene inherits, rather than repeated per scene:</p>
+<pre class="cpp" translate="no">Scene {
+  id: root
+
+  width: <span class="number">320</span>
+  height: <span class="number">600</span>
+
+  opacity: <span class="number">0</span>
+  visible: opacity <span class="operator">&gt;</span> <span class="number">0</span>
+  enabled: visible
+}</pre>
+<p>Portrait, because the balloon rises - and it is the right shape for a phone. Taller than the window's own ratio on purpose: the extra logical height is room the layout can hand to the balloon, and it costs nothing, because the scene is scaled rather than cropped.</p>
+<p class="centerAlign"><img src="images/ascent-betting.png" alt="The betting window, at the scene's own 320x600 - every screenshot in this tutorial is the scene itself, at the size it is laid out in" /></p><p>The last two lines of that base are the ones worth copying. A hidden scene is invisible, and in Qt an invisible item is still <i>enabled</i> - its buttons keep taking taps. Tying <code translate="no">enabled</code> to <code translate="no">visible</code> is what stops the menu being pressable through the game.</p>
+<p>The sky is anchored to <code translate="no">fullWindowAnchorItem</code> rather than to the scene. The scene is the play area, but the window may be taller or wider than it, and without that anchor the letterbox bars would show through as black.</p>
+<p>That anchor is also the whole of this game's answer to notches and home indicators. <code translate="no">Scene</code> fits itself into the safe area of the screen by default, so anything laid out in scene coordinates is already clear of them, and <code translate="no">fullWindowAnchorItem</code> is the way to opt back out. Two things opt out here: the sky, and the dim behind the menu's panels - a dim that stopped at the scene edge would leave lit bars of sky around a panel meant to be the only thing on screen.</p>
+<h2 id="switching-scenes">Switching Scenes</h2>
+<p>Which scene is on screen is one property on the window:</p>
+<pre class="qml" translate="no"><span class="comment">// One scene visible at a time, and the window decides which. A scene asks to</span>
+<span class="comment">// be left and does not name its successor, so the same scene can be reached</span>
+<span class="comment">// from anywhere without knowing what came before it.</span>
+<span class="comment">//</span>
+<span class="comment">// The game opens on the game: rounds are already cycling, and a title screen</span>
+<span class="comment">// between the player and the next one is a door with nothing behind it.</span>
+<span class="name">state</span>: <span class="string">&quot;game&quot;</span>
+
+<span class="name">states</span>: [
+  <span class="type">State</span> {
+    <span class="name">name</span>: <span class="string">&quot;menu&quot;</span>
+    <span class="type">PropertyChanges</span> { <span class="name">menuScene</span>.opacity: <span class="number">1</span> }
+    <span class="type">PropertyChanges</span> { <span class="name">root</span>.activeScene: <span class="name">menuScene</span> }
+  },
+  <span class="type">State</span> {
+    <span class="name">name</span>: <span class="string">&quot;game&quot;</span>
+    <span class="type">PropertyChanges</span> { <span class="name">gameScene</span>.opacity: <span class="number">1</span> }
+    <span class="type">PropertyChanges</span> { <span class="name">root</span>.activeScene: <span class="name">gameScene</span> }
+  }
+]</pre>
+<p>A state names a scene and makes it visible; the state machine reverses the change on the way out, so nothing has to remember to hide the scene it left. <code translate="no">activeScene</code> moves with it, which is what gives the visible scene the key focus.</p>
+<p>Scenes do not name their successor. Each one emits <code translate="no">backRequested</code> and the window decides where that goes, so a scene can be opened from anywhere without knowing what it will be returning to.</p>
+<p>The game opens on the game rather than on the menu. Rounds cycle whether anyone is watching, so a title screen between the player and the next round would be a door with nothing behind it.</p>
+<h2 id="from-elapsed-time-to-a-multiplier">From Elapsed Time to a Multiplier</h2>
+<p>Now the first piece of actual game logic. A crash game's multiplier grows exponentially: slowly at the start, then faster and faster. That shape is what makes waiting stop feeling free at some point, which is the entire tension of the game.</p>
+<pre class="cpp" translate="no"><span class="type">qreal</span> CrashCurve<span class="operator">::</span>multiplierAt(<span class="type">qint64</span> elapsedMs) <span class="keyword">const</span>
+{
+  <span class="comment">// A round can only pay out from 1.00x upwards, so time before the start is</span>
+  <span class="comment">// not negative winnings - it is simply the start.</span>
+  <span class="keyword">if</span> (elapsedMs <span class="operator">&lt;</span><span class="operator">=</span> <span class="number">0</span>)
+    <span class="keyword">return</span> <span class="number">1.0</span>;
+
+  <span class="keyword">return</span> qExp(m_growthRate <span class="operator">*</span> (elapsedMs <span class="operator">/</span> <span class="number">1000.0</span>));
+}</pre>
+<p>Two things are worth pointing out. The first is what the function does <i>not</i> do: it holds no state about the round. It does not know whether a round is running, when it started, or whether anyone has bet. You give it a duration and it gives you a multiplier. That makes it trivial to unit test - no clock to fake, no round to set up - and safe to call from a paint loop.</p>
+<p>The second is the guard on negative time. Clocks hand you odd deltas around a round boundary, and a negative one should not mean negative winnings. A round pays from 1.00x upwards, so anything before the start simply <i>is</i> the start.</p>
+<p>The growth rate is a property rather than a constant, so it can be tuned from QML while the game runs. At the default of 0.1 per second the multiplier doubles roughly every seven seconds, which is a pace players can feel.</p>
+<h2 id="letting-qml-see-the-core">Letting QML See the Core</h2>
+<p>The curve is a <code translate="no">QObject</code> with a <code translate="no">Q_PROPERTY</code> and a <code translate="no">Q_INVOKABLE</code> method, which is all QML needs. It just has to be told the type exists:</p>
+<pre class="cpp" translate="no"><span class="type">void</span> registerCoreTypes(Wallet <span class="operator">*</span>wallet<span class="operator">,</span> RoundSource <span class="operator">*</span>rounds<span class="operator">,</span> PlayerStats <span class="operator">*</span>stats<span class="operator">,</span>
+                       RoundHistory <span class="operator">*</span>history<span class="operator">,</span> ProvablyFair <span class="operator">*</span>fair)
+{
+    <span class="keyword">const</span> <span class="type">char</span> <span class="operator">*</span>uri <span class="operator">=</span> <span class="string">&quot;Ascent&quot;</span>;
+
+    <span class="comment">// There is exactly one wallet and one stream of rounds in a running game, so</span>
+    <span class="comment">// QML is handed those two rather than the means to build its own.</span>
+    qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;PlayerWallet&quot;</span><span class="operator">,</span> wallet);
+    qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;Rounds&quot;</span><span class="operator">,</span> rounds);
+    qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;PlayerStats&quot;</span><span class="operator">,</span> stats);
+    qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;RecentRounds&quot;</span><span class="operator">,</span> history);
+
+    <span class="comment">// The proof is checked with the same code that made it, which is the</span>
+    <span class="comment">// point: the player runs the game's own arithmetic against its own claim.</span>
+    qmlRegisterSingletonInstance(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;Fairness&quot;</span><span class="operator">,</span> fair);
+
+    <span class="comment">// Not creatable either, but the UI needs the state names to know whether it</span>
+    <span class="comment">// is drawing a betting window, a climbing multiplier or a wreck.</span>
+    qmlRegisterUncreatableType<span class="operator">&lt;</span>RoundEngine<span class="operator">&gt;</span>(uri<span class="operator">,</span> <span class="number">1</span><span class="operator">,</span> <span class="number">0</span><span class="operator">,</span> <span class="string">&quot;RoundEngine&quot;</span><span class="operator">,</span>
+                                            <span class="type">QStringLiteral</span>(<span class="string">&quot;RoundEngine belongs to the round &quot;</span>
+                                                           <span class="string">&quot;source, not to QML&quot;</span>));
+}</pre>
+<p>Notice that QML is not handed the means to build any of this. A running game has exactly one wallet and one stream of rounds, so those two objects are registered as singletons: QML can read <code translate="no">PlayerWallet.balance</code> and call <code translate="no">Rounds.requestCashOut()</code>, but it cannot invent a second wallet, and a second wallet is precisely the kind of bug that only shows up once someone has real points in it.</p>
+<p>The round engine is registered too, as an uncreatable type. That sounds pointless until you need <code translate="no">RoundEngine.Running</code> in a binding - registering it is what makes the state names exist in QML, without offering to instantiate an engine that would have nothing to run.</p>
+<p>Build and run, and the window comes up dark and empty. It is not a game yet - nothing moves and there is nothing to press - but the two halves of the app are connected, and every chapter from here on adds to a running program.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-setup.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="index.html">Ascent</a>
+<a class="nextPage" href="ascent-fairness.html">Provably Fair Randomness</a>
+</p>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-juice.qdoc -->
+  <title>Juice | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>Juice</li>
+  <link rel="prev" href="ascent-rounds.html" />
+  <link rel="next" href="ascent-shipping.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="ascent-rounds.html">The Round State Machine</a>
+<a class="nextPage" href="ascent-shipping.html">Persistence, Stats and Shipping</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#the-pop">The Pop</a></li>
+<li class="level1"><a href="#shaking-a-screen-that-is-held-by-anchors">Shaking a Screen That Is Held by Anchors</a></li>
+<li class="level1"><a href="#a-loop-with-no-seam">A Loop With No Seam</a></li>
+<li class="level1"><a href="#a-sky-that-cannot-run-out">A Sky That Cannot Run Out</a></li>
+<li class="level1"><a href="#the-number-is-not-allowed-to-lie">The Number Is Not Allowed To Lie</a></li>
+<li class="level1"><a href="#one-place-for-the-colours">One Place for the Colours</a></li>
+<li class="level1"><a href="#what-this-costs">What This Costs</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">Juice</h1>
+<!-- $$$ascent-juice.html-description -->
+<div class="descr" id="details">
+<p>Everything up to here decides what happens. Nothing up to here makes anyone want to watch it happen. This chapter is the difference between a number that goes up and a round somebody sits through.</p>
+<p>None of it touches the wallet or the crash point. That separation is the point: effects are allowed to exaggerate precisely because they cannot change the result.</p>
+<h2 id="the-pop">The Pop</h2>
+<p>The crash is the loudest moment in the game and it lasts a tenth of a second, so it gets four things at once: particles, a jolt, a flash and a sound. They are separate components, all fired from the same signal.</p>
+<p class="centerAlign"><img src="images/ascent-crash.png" alt="One tenth of a second after the pop: sparks, a red number, and the stake gone" /></p><pre class="qml" translate="no"><span class="comment">// A short burst, not a fountain: everything is thrown out in a tenth of a</span>
+<span class="comment">// second and the emitter goes quiet on its own.</span>
+<span class="name">emitterType</span>: <span class="name">ParticleBase</span>.<span class="name">Gravity</span>
+<span class="name">duration</span>: <span class="number">0.1</span>
+<span class="name">maxParticles</span>: <span class="number">90</span>
+<span class="name">emissionRate</span>: <span class="number">900</span></pre>
+<p>One emitter, declared once and restarted, rather than an effect created per crash. A game that builds a new emitter every round leaks a little each time and gets slower the longer somebody enjoys it. <code translate="no">autoStart</code> is false and the scene calls <code translate="no">start()</code> from <code translate="no">onRoundCrashed</code>, positioned at wherever the balloon had climbed to before the binding pulls it back down.</p>
+<p>The texture is a 32x32 white spark. It is white on purpose - the emitter tints it, so one file covers every colour of effect the game may want later.</p>
+<h2 id="shaking-a-screen-that-is-held-by-anchors">Shaking a Screen That Is Held by Anchors</h2>
+<p>A jolt wants to move the scene by a few pixels. Anchored children refuse to be moved, and dropping their anchors to allow it costs the layout.</p>
+<pre class="qml" translate="no"><span class="comment">// Four swings in a quarter of a second, each weaker than the last: the pop is</span>
+<span class="comment">// felt, and the multiplier underneath is readable again before the player has</span>
+<span class="comment">// decided how they feel about it.</span>
+<span class="type">ParallelAnimation</span> {
+  <span class="name">id</span>: <span class="name">shake</span>
+
+  <span class="type">NumberAnimation</span> {
+    <span class="name">target</span>: <span class="name">_</span>
+    <span class="name">property</span>: <span class="string">&quot;phase&quot;</span>
+    <span class="name">from</span>: <span class="number">0</span>
+    <span class="name">to</span>: <span class="number">8</span> <span class="operator">*</span> <span class="name">Math</span>.<span class="name">PI</span>
+    <span class="name">duration</span>: <span class="name">root</span>.<span class="name">duration</span>
+  }
+
+  <span class="type">NumberAnimation</span> {
+    <span class="name">target</span>: <span class="name">_</span>
+    <span class="name">property</span>: <span class="string">&quot;amplitude&quot;</span>
+    <span class="name">from</span>: <span class="name">root</span>.<span class="name">magnitude</span>
+    <span class="name">to</span>: <span class="number">0</span>
+    <span class="name">duration</span>: <span class="name">root</span>.<span class="name">duration</span>
+    <span class="name">easing</span>.type: <span class="name">Easing</span>.<span class="name">OutQuad</span>
+  }
+}</pre>
+<p>The component animates nothing but two numbers. The scene applies them as a <code translate="no">Translate</code> transform, which happens after layout and therefore has no opinion about anchors:</p>
+<pre class="cpp" translate="no">transform: Translate {
+  x: screenShake<span class="operator">.</span>offsetX
+  y: screenShake<span class="operator">.</span>offsetY
+}</pre>
+<p>The amplitude decays to zero over 260 ms while the phase runs through four swings, and the vertical axis uses a different frequency so the jolt traces a figure instead of sliding back and forth along one line.</p>
+<p>A quarter of a second is a deliberate ceiling. The multiplier has to be readable again before the player has finished deciding how they feel about the round that just ended.</p>
+<h2 id="a-loop-with-no-seam">A Loop With No Seam</h2>
+<pre class="qml" translate="no"><span class="comment">// Eight seconds that close on themselves: every partial in the loop lasts a</span>
+<span class="comment">// whole number of cycles, so the wrap is silent rather than almost silent.</span>
+<span class="comment">// It stays a wav on purpose - an mp3 would arrive with the encoder's own</span>
+<span class="comment">// padding at both ends, which is exactly the gap the loop is avoiding.</span>
+<span class="type">BackgroundMusic</span> {
+  <span class="name">id</span>: <span class="name">music</span>
+
+  <span class="name">source</span>: <span class="name">Qt</span>.<span class="name">resolvedUrl</span>(<span class="string">&quot;../assets/snd/ascent-loop.wav&quot;</span>)
+  <span class="name">volume</span>: <span class="number">0.3</span>
+}</pre>
+<p>The music is generated rather than licensed, which turns the usual hardest part of looping audio into arithmetic: the loop is eight seconds long and every partial in it lasts a whole number of cycles, so the waveform at the end of the loop is the waveform at the start. Notes whose tails run past the end are written back into the beginning of the same buffer.</p>
+<p>The format is the other half of it. An mp3 arrives with encoder padding at both ends, and that padding is audible as a gap on every repeat. A wav has none, costs 705 KB for eight seconds, and never has to be argued with.</p>
+<p>Short effects are GameSoundEffect rather than BackgroundMusic - the first is built for low latency, the second for long compressed files. Each effect is declared once and replayed, for the same reason the emitter is: loading a sound at the moment it is needed is how a game ends up with a pop that arrives after the balloon has gone.</p>
+<p>Felgo pauses every instance of both types from <code translate="no">settings.soundEnabled</code> and <code translate="no">settings.musicEnabled</code>, and stores those across runs, so muting the game is a property assignment rather than a bookkeeping exercise.</p>
+<h2 id="a-sky-that-cannot-run-out">A Sky That Cannot Run Out</h2>
+<p>The balloon climbs and the multiplier has no ceiling, so a background that moves with it has to be endless in both senses: it must never run out of sky, and it must never stop scrolling.</p>
+<pre class="qml" translate="no"><span class="comment">// Altitude is read off the logarithm of the multiplier rather than the</span>
+<span class="comment">// multiplier itself, so the sky keeps moving at 50x instead of having left</span>
+<span class="comment">// the atmosphere at 5x. It is also the same curve the balloon rises on.</span>
+property <span class="type">real</span> <span class="name">climb</span>: <span class="name">Math</span>.<span class="name">log</span>(<span class="name">Rounds</span>.<span class="name">engine</span>.<span class="name">multiplier</span>)
+
+<span class="comment">// The multiplier falls back to 1.00 when the next round opens. Gliding down</span>
+<span class="comment">// through that is a descent; snapping is a jump cut.</span>
+Behavior on <span class="name">climb</span> {
+  <span class="name">enabled</span>: <span class="name">Rounds</span>.<span class="name">engine</span>.<span class="name">state</span> <span class="operator">===</span> <span class="name">RoundEngine</span>.<span class="name">Betting</span>
+
+  <span class="type">NumberAnimation</span> {
+    <span class="name">duration</span>: <span class="number">900</span>
+    <span class="name">easing</span>.type: <span class="name">Easing</span>.<span class="name">InOutQuad</span>
+  }
+}</pre>
+<p>Reading altitude off the logarithm is what keeps it moving. Tied to the multiplier directly, the scenery would have left the atmosphere by 5x and stood still for the rest of the round - which is exactly the part of the round worth watching.</p>
+<p>Each layer scrolls at its own multiple of that, and wraps:</p>
+<pre class="qml" translate="no"><span class="comment">// The pair covers [-height, height], so the visible band is always inside it.</span>
+readonly property <span class="type">real</span> <span class="name">wrapped</span>: ((<span class="name">root</span>.<span class="name">offset</span> <span class="operator">%</span> <span class="name">root</span>.<span class="name">height</span>) <span class="operator">+</span> <span class="name">root</span>.<span class="name">height</span>) <span class="operator">%</span> <span class="name">root</span>.<span class="name">height</span>
+  <span class="operator">-</span> <span class="name">root</span>.<span class="name">height</span></pre>
+<p>The same field of clouds is drawn twice, one above the other, and the pair is slid by the wrapped offset. Because the pair always covers the range from minus one height to plus one height, the visible band is inside it wherever the scroll has got to. There is no seam to catch and no special case at the top of the layer, which is the failure mode of the more obvious version with a single copy and a reset.</p>
+<p>Cloud positions are hashed from the index rather than drawn at random. Both copies have to agree on where every cloud is, or the wrap becomes visible the moment it happens.</p>
+<p>Two details that are cheaper than they look: the sky darkens by fading one fixed gradient over another instead of recolouring gradient stops, because moving stops mean a new gradient texture every frame; and the drop back to 1.00x when the next round opens is animated only while betting is open, so the sky descends instead of cutting.</p>
+<h2 id="the-number-is-not-allowed-to-lie">The Number Is Not Allowed To Lie</h2>
+<p>Everything above is free to exaggerate. The multiplier is not.</p>
+<pre class="qml" translate="no"><span class="comment">// Zero at 1.00x, one at 10x and pinned there above it. Every bit of theatre</span>
+<span class="comment">// below reads off this single number.</span>
+readonly property <span class="type">real</span> <span class="name">tension</span>: <span class="name">Math</span>.<span class="name">min</span>(<span class="name">Math</span>.<span class="name">log</span>(<span class="name">Rounds</span>.<span class="name">engine</span>.<span class="name">multiplier</span>) <span class="operator">/</span> <span class="name">Math</span>.<span class="name">LN10</span>, <span class="number">1</span>)</pre>
+<p>One value, zero at 1.00x and one at 10x, drives the size, the colour and the pulse. The text itself is bound straight to the engine with no easing and no animated counter - a number that slides towards its target is a number somebody could read, tap on, and turn out not to have cashed out at.</p>
+<pre class="qml" translate="no"><span class="comment">// A heartbeat that tightens as the round goes on: slow and shallow down at</span>
+<span class="comment">// 1.2x, quick and sharp past 8x. The duration is only read when a loop ends,</span>
+<span class="comment">// so a round that climbs fast speeds up between beats instead of stuttering</span>
+<span class="comment">// inside one.</span>
+<span class="type">SequentialAnimation</span> {
+  <span class="name">running</span>: <span class="name">Rounds</span>.<span class="name">engine</span>.<span class="name">state</span> <span class="operator">===</span> <span class="name">RoundEngine</span>.<span class="name">Running</span>
+  <span class="name">loops</span>: <span class="name">Animation</span>.<span class="name">Infinite</span>
+  <span class="name">alwaysRunToEnd</span>: <span class="number">true</span>
+
+  <span class="type">NumberAnimation</span> {
+    <span class="name">target</span>: <span class="name">_</span>
+    <span class="name">property</span>: <span class="string">&quot;pulse&quot;</span>
+    <span class="name">to</span>: <span class="number">1</span> <span class="operator">+</span> <span class="number">0.03</span> <span class="operator">+</span> <span class="number">0.05</span> <span class="operator">*</span> <span class="name">root</span>.<span class="name">tension</span>
+    <span class="name">duration</span>: (<span class="number">900</span> <span class="operator">-</span> <span class="number">620</span> <span class="operator">*</span> <span class="name">root</span>.<span class="name">tension</span>) <span class="operator">*</span> <span class="number">0.35</span>
+    <span class="name">easing</span>.type: <span class="name">Easing</span>.<span class="name">OutQuad</span>
+  }
+
+  <span class="type">NumberAnimation</span> {
+    <span class="name">target</span>: <span class="name">_</span>
+    <span class="name">property</span>: <span class="string">&quot;pulse&quot;</span>
+    <span class="name">to</span>: <span class="number">1</span>
+    <span class="name">duration</span>: (<span class="number">900</span> <span class="operator">-</span> <span class="number">620</span> <span class="operator">*</span> <span class="name">root</span>.<span class="name">tension</span>) <span class="operator">*</span> <span class="number">0.65</span>
+    <span class="name">easing</span>.type: <span class="name">Easing</span>.<span class="name">InOutQuad</span>
+  }
+}</pre>
+<p>The beat tightens from roughly 900 ms down to 280 ms as the round climbs. Animation durations are read when a loop starts and not while it runs, so a fast round speeds up between beats instead of stuttering inside one.</p>
+<h2 id="one-place-for-the-colours">One Place for the Colours</h2>
+<p>Every colour and every text size the interface uses is a property of a single QML singleton, <code translate="no">Style</code>. The pictures are exempt - the sky gradient, the balloon and the sparks keep their colours where they are drawn, because those are chosen against each other rather than against the rest of the screen.</p>
+<pre class="qml" translate="no"><span class="comment">// Seven sizes, each far enough from the next that two of them beside each</span>
+<span class="comment">// other cannot be mistaken for one size drawn twice. Anything that needs a</span>
+<span class="comment">// size not on this list is either shouting or hiding.</span>
+readonly property <span class="type">int</span> <span class="name">displaySize</span>: <span class="number">56</span>
+readonly property <span class="type">int</span> <span class="name">titleSize</span>: <span class="number">48</span>
+readonly property <span class="type">int</span> <span class="name">headingSize</span>: <span class="number">18</span>
+readonly property <span class="type">int</span> <span class="name">bodySize</span>: <span class="number">16</span>
+readonly property <span class="type">int</span> <span class="name">labelSize</span>: <span class="number">14</span>
+readonly property <span class="type">int</span> <span class="name">captionSize</span>: <span class="number">12</span>
+readonly property <span class="type">int</span> <span class="name">fineSize</span>: <span class="number">10</span></pre>
+<p>Two details are worth copying. The singleton is not called <code translate="no">Theme</code>, because Felgo declares a <code translate="no">Theme</code> singleton of its own: reusing the name resolves to the wrong object in whichever scope Felgo's import happens to reach, and it fails as an undefined property rather than as an error naming the clash.</p>
+<p>And because this game loads its QML as plain files next to the binary, the singleton is declared in a <code translate="no">qmldir</code> beside them rather than in the module that carries the C++ types:</p>
+<pre class="cpp" translate="no">singleton Style <span class="number">1.0</span> Style<span class="operator">.</span>qml</pre>
+<h2 id="what-this-costs">What This Costs</h2>
+<p>Nothing in this chapter runs a clock of its own. The particles, the shake, the flash and the punch are all fired by <code translate="no">onRoundCrashed</code>; the sky and the tension are bindings on a multiplier that was already changing. The scene has one moving part and everything else is a consequence of it.</p>
+<p>That is the test worth applying to any of it: an effect that needs its own clock will eventually disagree with the round, and it will disagree in the frame that matters most.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-juice.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="ascent-rounds.html">The Round State Machine</a>
+<a class="nextPage" href="ascent-shipping.html">Persistence, Stats and Shipping</a>
+</p>
+</body>
+</html>

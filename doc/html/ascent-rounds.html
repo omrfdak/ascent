@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-rounds.qdoc -->
+  <title>The Round State Machine | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>The Round State Machine</li>
+  <link rel="prev" href="ascent-fairness.html" />
+  <link rel="next" href="ascent-juice.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="ascent-fairness.html">Provably Fair Randomness</a>
+<a class="nextPage" href="ascent-juice.html">Juice</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#the-four-states-of-a-round">The Four States of a Round</a></li>
+<li class="level1"><a href="#placing-a-bet">Placing a Bet</a></li>
+<li class="level1"><a href="#cashing-out-before-the-pop">Cashing Out Before the Pop</a></li>
+<li class="level1"><a href="#handling-the-felgo-splash-screen">Handling the Felgo Splash Screen</a></li>
+<li class="level1"><a href="#where-c-ends-and-qml-begins">Where C++ Ends and QML Begins</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">The Round State Machine</h1>
+<!-- $$$ascent-rounds.html-description -->
+<div class="descr" id="details">
+<p>A crash game has very few moves, and almost all of the work is refusing them at the wrong moment. This chapter is about which moves are legal when.</p>
+<h2 id="the-four-states-of-a-round">The Four States of a Round</h2>
+<pre class="cpp" translate="no"><span class="keyword">enum</span> State {
+  Betting<span class="operator">,</span>  <span class="comment">// taking bets, the balloon is on the ground</span>
+  Running<span class="operator">,</span>  <span class="comment">// the multiplier is climbing</span>
+  Crashed<span class="operator">,</span>  <span class="comment">// it popped, losing bets are gone</span>
+  Settled   <span class="comment">// results are on screen, waiting to open the next round</span>
+};
+Q_ENUM(State)</pre>
+<p>Betting takes stakes and nothing else. Running climbs and accepts exactly one cash out. Crashed is the moment the balloon pops, and Settled is the few seconds of results before the next round opens.</p>
+<p>Every public method on the engine starts by checking the state, and returns <code translate="no">false</code> rather than throwing or asserting. The caller is a user interface, and a refused tap is a normal thing for a user interface to do.</p>
+<p>The engine is also told where the round pops instead of deciding it - the commitment from the previous chapter was published before any of this ran, and an engine that could pick its own crash point would quietly undo that.</p>
+<h2 id="placing-a-bet">Placing a Bet</h2>
+<p>A bet is only accepted while betting is open and only once per round. The second condition matters more than it looks: without it a player could add to their stake at 3x, which is not betting, it is buying a result.</p>
+<p>The stake leaves the wallet immediately. Points that are in play are gone until a cash out puts them back, so there is no way to bet the same points twice by acting quickly.</p>
+<h2 id="cashing-out-before-the-pop">Cashing Out Before the Pop</h2>
+<pre class="cpp" translate="no"><span class="type">bool</span> RoundEngine<span class="operator">::</span>cashOut()
+{
+  <span class="comment">// Only once, only while the balloon is still up, and only with money in.</span>
+  <span class="keyword">if</span> (m_state <span class="operator">!</span><span class="operator">=</span> Running <span class="operator">|</span><span class="operator">|</span> m_hasCashedOut <span class="operator">|</span><span class="operator">|</span> m_bet <span class="operator">&lt;</span><span class="operator">=</span> <span class="number">0.0</span>)
+    <span class="keyword">return</span> <span class="keyword">false</span>;
+
+  setHasCashedOut(<span class="keyword">true</span>);
+
+  <span class="keyword">const</span> <span class="type">qreal</span> payout <span class="operator">=</span> m_wallet<span class="operator">-</span><span class="operator">&gt;</span>payOut(m_bet<span class="operator">,</span> m_multiplier);
+  <span class="keyword">emit</span> cashedOut(payout<span class="operator">,</span> m_multiplier);
+
+  <span class="keyword">return</span> <span class="keyword">true</span>;
+}</pre>
+<p>Three refusals in one condition, and each is a bug somebody has shipped: not while Running means no cashing out after the pop, <code translate="no">m_hasCashedOut</code> means no collecting twice on one stake, and the bet check means no payout for having watched a round.</p>
+<p class="centerAlign"><img src="images/ascent-cashed-out.png" alt="Cashed out at 1.40x while the round is still going. The number keeps climbing and the player no longer has anything riding on it - which is most of what makes the game hurt" /></p><p>The payout uses <code translate="no">m_multiplier</code> - the value the player can read - and not the curve behind it. The difference is fractions of a percent per round, and it is the difference between a game that pays what it displays and one that argues about rounding.</p>
+<p>That value is set in exactly one place:</p>
+<pre class="cpp" translate="no"><span class="type">bool</span> RoundEngine<span class="operator">::</span>advanceTo(<span class="type">qint64</span> elapsedMs)
+{
+  <span class="keyword">if</span> (m_state <span class="operator">!</span><span class="operator">=</span> Running)
+    <span class="keyword">return</span> <span class="keyword">false</span>;
+
+  <span class="comment">// Truncating happens here and nowhere else. The player is paid at the number</span>
+  <span class="comment">// they can read on screen, so that number - not the raw curve behind it - is</span>
+  <span class="comment">// what the round is settled with.</span>
+  <span class="keyword">const</span> <span class="type">qreal</span> raw <span class="operator">=</span> m_curve<span class="operator">-</span><span class="operator">&gt;</span>multiplierAt(elapsedMs);
+  <span class="keyword">const</span> <span class="type">qreal</span> shown <span class="operator">=</span> qFloor(raw <span class="operator">*</span> <span class="number">100.0</span>) <span class="operator">/</span> <span class="number">100.0</span>;
+
+  <span class="comment">// The target is settled before the crash even when one tick covers both.</span>
+  <span class="comment">// Whatever the clock did, a target below the crash point was reached first in</span>
+  <span class="comment">// the round, and a dropped frame must not turn a win into a loss.</span>
+  takeTheMoneyAtTheTarget(shown);
+
+  <span class="keyword">if</span> (shown <span class="operator">&gt;</span><span class="operator">=</span> m_crashPoint) {
+    <span class="comment">// Never overshoot into a multiplier that was never reachable this round.</span>
+    setMultiplier(m_crashPoint);
+    setState(Crashed);
+    <span class="keyword">emit</span> crashed(m_crashPoint);
+
+    <span class="keyword">return</span> <span class="keyword">true</span>;
+  }
+
+  setMultiplier(shown);
+
+  <span class="keyword">return</span> <span class="keyword">true</span>;
+}</pre>
+<p>The engine has no clock. Something outside advances it, which is why a test can run a full round in microseconds while the game runs the same code off a 16 ms timer. Truncation to two decimals happens here and nowhere else, and on the crash the multiplier is pinned to the committed point rather than to whatever the curve had reached by the time the timer last fired.</p>
+<h2 id="handling-the-felgo-splash-screen">Handling the Felgo Splash Screen</h2>
+<p>With a free license Felgo shows a splash screen for the first few seconds. The game behind it is already running, which for a game with a permanent round cycle means the first round starts while the player is still looking at a logo. They arrive to a round they never had a chance to bet on.</p>
+<pre class="qml" translate="no"><span class="comment">// Not Component.onCompleted: on a free license the splash screen sits on top</span>
+<span class="comment">// for a few seconds, and rounds cycling behind it would mean the player walks</span>
+<span class="comment">// in on a bet they never had the chance to place.</span>
+<span class="name">onSplashScreenFinished</span>: <span class="name">Rounds</span>.<span class="name">start</span>()</pre>
+<p>One signal instead of <code translate="no">Component.onCompleted</code>. Worth knowing before you build anything that starts moving on its own.</p>
+<h2 id="where-c-ends-and-qml-begins">Where C++ Ends and QML Begins</h2>
+<p>The line is drawn at &quot;what is true&quot; versus &quot;what it looks like&quot;.</p>
+<p>C++ owns the seed, the crash point, the state machine, the balance, and the clock. QML owns the balloon, the colours, the countdown text, and which button is offered. When the interface wants something to happen it asks: <code translate="no">Rounds.requestBet()</code> and <code translate="no">Rounds.requestCashOut()</code> return nothing, and the answer arrives as a signal.</p>
+<p>That indirection looks like ceremony in a single-player game where the answer is instant. It is there because the same screen has to work when the answer comes from a server instead - which is the subject of the last chapter.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-rounds.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="ascent-fairness.html">Provably Fair Randomness</a>
+<a class="nextPage" href="ascent-juice.html">Juice</a>
+</p>
+</body>
+</html>

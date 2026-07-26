@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<!-- ascent-fairness.qdoc -->
+  <title>Provably Fair Randomness | Ascent 1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="style/ascent.css">
+</head>
+<body>
+<li><a href="index.html">Ascent</a></li>
+<li>Provably Fair Randomness</li>
+  <link rel="prev" href="ascent-setup.html" />
+  <link rel="next" href="ascent-rounds.html" />
+<p class="naviNextPrevious headerNavi">
+<a class="prevPage" href="ascent-setup.html">Project Setup and the Game Loop</a>
+<a class="nextPage" href="ascent-rounds.html">The Round State Machine</a>
+</p>
+<div class="sidebar">
+<div class="toc">
+<h3 id="toc">Contents</h3>
+<ul>
+<li class="level1"><a href="#why-a-random-number-is-not-enough">Why a Random Number Is Not Enough</a></li>
+<li class="level1"><a href="#commit-and-reveal">Commit and Reveal</a></li>
+<li class="level1"><a href="#turning-a-seed-into-a-crash-point">Turning a Seed into a Crash Point</a></li>
+<li class="level1"><a href="#letting-the-player-check-the-round">Letting the Player Check the Round</a></li>
+<li class="level1"><a href="#tutorial-chapters">Tutorial Chapters</a></li>
+</ul>
+</div>
+<div class="sidebar-content" id="sidebar-content"></div></div>
+<h1 class="title">Provably Fair Randomness</h1>
+<!-- $$$ascent-fairness.html-description -->
+<div class="descr" id="details">
+<p>This chapter decides where each round pops - and, more importantly, proves afterwards that the decision was not influenced by the player's bet.</p>
+<h2 id="why-a-random-number-is-not-enough">Why a Random Number Is Not Enough</h2>
+<p>The obvious implementation is one line: draw a random number when the round starts and pop there. It works, and it is impossible to defend.</p>
+<p>Not because the number is predictable, but because nobody outside the code can tell when it was drawn. A game that decides the crash point after seeing a large bet looks exactly like a game that decided it before, and the player has no way to tell the two apart. In a game about nerve, &quot;trust me&quot; is a weak answer to a round that popped at 1.01x right after a big stake.</p>
+<p>So the game commits first and reveals later.</p>
+<h2 id="commit-and-reveal">Commit and Reveal</h2>
+<p>Before betting opens, a secret seed is drawn and only its hash is published:</p>
+<pre class="cpp" translate="no"><span class="type">QString</span> ProvablyFair<span class="operator">::</span>commitmentFor(<span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>seed) <span class="keyword">const</span>
+{
+  <span class="keyword">const</span> <span class="type">QByteArray</span> digest <span class="operator">=</span> <span class="type">QCryptographicHash</span><span class="operator">::</span>hash(seed<span class="operator">.</span>toUtf8()<span class="operator">,</span> <span class="type">QCryptographicHash</span><span class="operator">::</span>Sha256);
+
+  <span class="keyword">return</span> <span class="type">QString</span><span class="operator">::</span>fromLatin1(digest<span class="operator">.</span>toHex());
+}</pre>
+<p>A plain SHA-256, deliberately. The player can paste the seed into any hashing tool afterwards and get the same string - no custom scheme to take on faith.</p>
+<p>The ordering is what makes the hash mean anything, so it is enforced where the round is set up rather than left as a convention:</p>
+<pre class="cpp" translate="no"><span class="type">void</span> LocalRoundSource<span class="operator">::</span>openBetting()
+{
+  <span class="comment">// The seed is drawn, and its hash published, before anyone can bet on the</span>
+  <span class="comment">// round it decides. That order is the whole promise.</span>
+  m_seed <span class="operator">=</span> m_fair<span class="operator">-</span><span class="operator">&gt;</span>generateSeed();
+  m_commitment <span class="operator">=</span> m_fair<span class="operator">-</span><span class="operator">&gt;</span>commitmentFor(m_seed);
+  <span class="keyword">emit</span> commitmentChanged();
+
+  <span class="keyword">emit</span> bettingOpened(m_commitment<span class="operator">,</span> m_bettingWindowMs);
+
+  <span class="comment">// The countdown is read off the same clock that ends the window, so what the</span>
+  <span class="comment">// player is counting down to is the moment the round actually starts.</span>
+  setBettingMsRemaining(m_bettingWindowMs);
+  m_phaseClock<span class="operator">.</span>start();
+  m_clockTimer<span class="operator">.</span>start();
+
+  m_windowTimer<span class="operator">.</span>disconnect();
+  connect(<span class="operator">&amp;</span>m_windowTimer<span class="operator">,</span> <span class="operator">&amp;</span><span class="type">QTimer</span><span class="operator">::</span>timeout<span class="operator">,</span> <span class="keyword">this</span><span class="operator">,</span> <span class="operator">&amp;</span>LocalRoundSource<span class="operator">::</span>beginRound);
+  m_windowTimer<span class="operator">.</span>start(m_bettingWindowMs);
+}</pre>
+<p>The seed exists and its hash is on screen before the game will accept a single point. After that the game is committed: changing the seed would change the hash the player already saw, and the seed itself gives nothing away - which is the entire job of a hash function.</p>
+<h2 id="turning-a-seed-into-a-crash-point">Turning a Seed into a Crash Point</h2>
+<p>The seed still has to become a multiplier, and the shape of that mapping is what makes the game feel like a crash game:</p>
+<pre class="cpp" translate="no"><span class="type">qreal</span> ProvablyFair<span class="operator">::</span>crashPointFor(<span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>seed) <span class="keyword">const</span>
+{
+  <span class="keyword">const</span> <span class="type">QByteArray</span> digest <span class="operator">=</span> <span class="type">QCryptographicHash</span><span class="operator">::</span>hash(seed<span class="operator">.</span>toUtf8()<span class="operator">,</span> <span class="type">QCryptographicHash</span><span class="operator">::</span>Sha256);
+
+  <span class="comment">// Read 52 bits off the front of the digest and read them as a number in [0, 1).</span>
+  <span class="type">quint64</span> bits <span class="operator">=</span> <span class="number">0</span>;
+  <span class="keyword">for</span> (<span class="type">int</span> i <span class="operator">=</span> <span class="number">0</span>; i <span class="operator">&lt;</span> <span class="number">7</span>; <span class="operator">+</span><span class="operator">+</span>i)
+    bits <span class="operator">=</span> (bits <span class="operator">&lt;</span><span class="operator">&lt;</span> <span class="number">8</span>) <span class="operator">|</span> <span class="keyword">static_cast</span><span class="operator">&lt;</span><span class="type">quint8</span><span class="operator">&gt;</span>(digest<span class="operator">.</span>at(i));
+  bits <span class="operator">&amp;</span><span class="operator">=</span> RandomRange <span class="operator">-</span> <span class="number">1</span>;
+
+  <span class="keyword">const</span> <span class="type">qreal</span> uniform <span class="operator">=</span> <span class="keyword">static_cast</span><span class="operator">&lt;</span><span class="type">qreal</span><span class="operator">&gt;</span>(bits) <span class="operator">/</span> <span class="keyword">static_cast</span><span class="operator">&lt;</span><span class="type">qreal</span><span class="operator">&gt;</span>(RandomRange);
+
+  <span class="comment">// 1/(1-x) turns a flat number into the long tail a crash game needs: half the</span>
+  <span class="comment">// rounds end below 2x, a few run to 50x. The house edge shaves the whole curve</span>
+  <span class="comment">// down slightly, which is also what makes an instant pop at 1.00x possible.</span>
+  <span class="keyword">const</span> <span class="type">qreal</span> rawCrashPoint <span class="operator">=</span> (<span class="number">1.0</span> <span class="operator">-</span> m_houseEdge) <span class="operator">/</span> (<span class="number">1.0</span> <span class="operator">-</span> uniform);
+
+  <span class="comment">// The multiplier is shown with two decimals, so it has to be decided with two</span>
+  <span class="comment">// decimals too - a payout must never be worth more than what the player read.</span>
+  <span class="keyword">const</span> <span class="type">qreal</span> truncated <span class="operator">=</span> qFloor(rawCrashPoint <span class="operator">*</span> <span class="number">100.0</span>) <span class="operator">/</span> <span class="number">100.0</span>;
+
+  <span class="keyword">return</span> qBound(<span class="number">1.0</span><span class="operator">,</span> truncated<span class="operator">,</span> MaxCrashPoint);
+}</pre>
+<p>Fifty-two bits are read off the digest and read as a number between zero and one. Fifty-two, because that is how much a double holds without losing a single step - the fraction is exact rather than nearly exact.</p>
+<p>Then <code translate="no">1/(1-x)</code> stretches that flat number into a long tail. Half the rounds end below 2x, a tenth pass 10x, and one in a hundred runs past 100x. That distribution is the game: if most rounds paid 5x, waiting would be free, and if none did, nobody would wait at all.</p>
+<p>The house edge is not a fee subtracted from the payout. It shifts the whole curve down slightly, which mostly shows up as rounds that pop instantly at 1.00x - about one in fifty. It is the same one percent either way, but this way the player sees it happen instead of finding it in the small print.</p>
+<p>The result is floored to two decimals for a reason that costs money if you get it wrong: the multiplier is shown with two decimals, so it must be decided with two decimals. A payout must never be worth more than the number the player read on screen.</p>
+<h2 id="letting-the-player-check-the-round">Letting the Player Check the Round</h2>
+<p>When the round is over, the seed is published and the whole thing can be recomputed from scratch:</p>
+<pre class="cpp" translate="no"><span class="type">bool</span> ProvablyFair<span class="operator">::</span>verify(<span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>seed<span class="operator">,</span> <span class="keyword">const</span> <span class="type">QString</span> <span class="operator">&amp;</span>commitment<span class="operator">,</span> <span class="type">qreal</span> crashPoint) <span class="keyword">const</span>
+{
+  <span class="keyword">return</span> commitmentFor(seed) <span class="operator">=</span><span class="operator">=</span> commitment <span class="operator">&amp;</span><span class="operator">&amp;</span> qFuzzyCompare(crashPointFor(seed)<span class="operator">,</span> crashPoint);
+}</pre>
+<p>Both halves have to match. The seed must hash to the commitment that was shown before betting, and it must produce the crash point the round actually ended on. A game that swapped the seed fails the first check; a game that kept the seed but ended the round early fails the second.</p>
+<p>In the running game the seed replaces the hash on screen the moment the balloon pops, so the proof is available without leaving the round. A dedicated verification screen for past rounds comes later in the tutorial.</p>
+<p>None of this needs a server, and none of it is expensive - two hashes per round. What it buys is a game that can answer the only question a crash game ever gets asked.</p>
+<h2 id="tutorial-chapters">Tutorial Chapters</h2>
+<ol class="1" type="1"><li><a href="index.html">Overview</a></li>
+<li><a href="ascent-setup.html">Project Setup and the Game Loop</a></li>
+<li><a href="ascent-fairness.html">Provably Fair Randomness</a></li>
+<li><a href="ascent-rounds.html">The Round State Machine</a></li>
+<li><a href="ascent-juice.html">Juice</a></li>
+<li><a href="ascent-shipping.html">Persistence, Stats and Shipping</a></li>
+<li><a href="ascent-perspectives.html">Further Perspectives</a></li>
+</ol>
+</div>
+<!-- @@@ascent-fairness.html -->
+<p class="naviNextPrevious footerNavi">
+<a class="prevPage" href="ascent-setup.html">Project Setup and the Game Loop</a>
+<a class="nextPage" href="ascent-rounds.html">The Round State Machine</a>
+</p>
+</body>
+</html>

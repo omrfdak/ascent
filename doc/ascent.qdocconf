@@ -19,6 +19,15 @@ moduleheader =
 
 navigation.homepage = "Ascent"
 
+# qdoc writes no styling of its own. The stylesheet is copied into html/style/
+# and linked from every page; the viewport line goes in the same block because
+# it is the only other thing these pages need in their head.
+HTML.stylesheets = style/ascent.css
+
+HTML.headerstyles = \
+    "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" \
+    "  <link rel=\"stylesheet\" type=\"text/css\" href=\"style/ascent.css\">\n"
+
 # A broken link or an unresolved snippet fails the run instead of scrolling past.
 warninglimit         = 0
 warninglimit.enabled = true
