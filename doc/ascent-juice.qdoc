@@ -18,6 +18,8 @@
     second, so it gets four things at once: particles, a jolt, a flash and a
     sound. They are separate components, all fired from the same signal.
 
+    \image ascent-crash.png One tenth of a second after the pop: sparks, a red number, and the stake gone
+
     \snippet qml/CrashBurst.qml burst
 
     One emitter, declared once and restarted, rather than an effect created per

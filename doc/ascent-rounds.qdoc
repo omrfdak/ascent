@@ -42,6 +42,8 @@
     collecting twice on one stake, and the bet check means no payout for having
     watched a round.
 
+    \image ascent-cashed-out.png Cashed out at 1.40x while the round is still going. The number keeps climbing and the player no longer has anything riding on it - which is most of what makes the game hurt
+
     The payout uses \c m_multiplier - the value the player can read - and not the
     curve behind it. The difference is fractions of a percent per round, and it
     is the difference between a game that pays what it displays and one that

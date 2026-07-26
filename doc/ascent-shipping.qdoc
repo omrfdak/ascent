@@ -74,6 +74,8 @@
     And the streak is reset rather than decremented. A streak is a run of wins,
     so one loss ends it - while \c bestStreak keeps what the run was worth.
 
+    \image ascent-stats.png What eight rounds look like from the player's side
+
     Saving is one map rather than seven keys:
 
     \snippet src/PlayerStats.cpp save-restore
@@ -120,6 +122,8 @@
     verification screen promised in the fairness chapter reads from - and it
     re-derives the crash point from the seed every time the list is drawn rather
     than trusting a verdict stored next to the data it is meant to be checking.
+
+    \image ascent-verify.png The verification screen: each past round with its commitment, its revealed seed, and the crash point recomputed on the spot
 
     One detail there is deliberate. The screen is handed the game's own
     \c ProvablyFair instance:

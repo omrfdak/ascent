@@ -73,9 +73,11 @@
 
     \snippet qml/Style.qml type-scale
 
+    \image ascent-menu.png The menu, drawn entirely from Style: one accent colour, one surface, and three sizes of text
+
     No interface colour and no font size is written anywhere else in the QML -
-    which means
-    a second theme is a second \c Style, not a search through twenty files. A
+    which means a second theme is a second \c Style, not a search through twenty
+    files. A
     daytime sky, a paper theme, a high-contrast one for players who need it: each
     is a set of values, and the layout does not know which one it is drawing.
 

@@ -59,6 +59,8 @@
     room the layout can hand to the balloon, and it costs nothing, because the
     scene is scaled rather than cropped.
 
+    \image ascent-betting.png The betting window, at the scene's own 320x600 - every screenshot in this tutorial is the scene itself, at the size it is laid out in
+
     The last two lines of that base are the ones worth copying. A hidden scene is
     invisible, and in Qt an invisible item is still \e enabled - its buttons keep
     taking taps. Tying \c enabled to \c visible is what stops the menu being
