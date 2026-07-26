@@ -237,7 +237,17 @@ target_compile_definitions(Ascent PRIVATE ASCENT_MAIN_QML=&quot;${AscentMainQml}
 <pre class="cpp" translate="no">felgo<span class="operator">.</span>setMainQmlFileName(<span class="type">QStringLiteral</span>(ASCENT_MAIN_QML));</pre>
 <p>That looks like indirection for its own sake until you picture the failure it removes: a release build with the QML compiled in and <code translate="no">main.cpp</code> still pointing at a directory that is no longer there. The app starts, the window opens, and nothing is in it.</p>
 <p>One case does not answer the question the same way. Multi-config generators - Xcode, and therefore every iOS build - leave <code translate="no">CMAKE_BUILD_TYPE</code> empty, because the configuration is chosen when building rather than when configuring. Those fall to the shipping arrangement, which is the right way round: loose files are what goes missing on a device, while a reload you have to rebuild for is only an inconvenience.</p>
-<p>Two things this does not do. The license key is still empty, and that is what the Felgo splash screen is waiting for rather than anything in the build. And <code translate="no">PRODUCT_STAGE</code> reaches the running app only through <code translate="no">qml/config.json</code>, a file this project does not have - Felgo rewrites that file when it is present rather than creating one, so a game with no <code translate="no">config.json</code> reports the <code translate="no">test</code> stage whatever the build says. Adding one means adding a tracked file that the build edits behind you every time you configure, which is a trade worth making deliberately rather than by default.</p>
+<p><code translate="no">PRODUCT_STAGE</code> needs one more file to mean anything. Setting it in the build is not what the running app reads: it reads <code translate="no">qml/config.json</code>, and Felgo rewrites four fields of that file - the identifier, the two version numbers and the stage - out of the values above. Rewrites, not creates. A project without a <code translate="no">config.json</code> gets no warning and no error; it simply reports the <code translate="no">test</code> stage forever, whatever the build was told.</p>
+<pre class="cpp" translate="no">{
+  &quot;title&quot;: &quot;Ascent&quot;,
+  &quot;identifier&quot;: &quot;com.merdak.ascent&quot;,
+  &quot;orientation&quot;: &quot;portrait&quot;,
+  &quot;versioncode&quot;: 1,
+  &quot;versionname&quot;: &quot;1.0.0&quot;,
+  &quot;stage&quot;: &quot;publish&quot;
+}</pre>
+<p>That the build edits a file in the source tree has a consequence worth knowing before it surprises you: configuring a Debug build leaves <code translate="no">stage</code> on <code translate="no">test</code>, and configuring a Release build leaves it on <code translate="no">publish</code>, so a file you have not touched shows up as changed depending on which build directory you configured last. What belongs in version control is the shipping value.</p>
+<p>The license key is the one thing here the build cannot decide. It is still empty, and that - not anything above - is what the Felgo splash screen is waiting for.</p>
 <p>On macOS there is one more thing, and it is the kind of problem that presents itself as something else entirely: the app's icon stops appearing. Not a missing icon - the file is in the bundle, correctly named, correctly referenced. The bundle is simply no longer trusted.</p>
 <pre class="cpp" translate="no">if(APPLE AND NOT IOS)
   # The linker signs the executable ad hoc, and everything copied into the bundle

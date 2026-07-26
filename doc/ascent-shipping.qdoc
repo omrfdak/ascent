@@ -258,15 +258,25 @@
     round: loose files are what goes missing on a device, while a reload you
     have to rebuild for is only an inconvenience.
 
-    Two things this does not do. The license key is still empty, and that is
-    what the Felgo splash screen is waiting for rather than anything in the
-    build. And \c PRODUCT_STAGE reaches the running app only through
-    \c qml/config.json, a file this project does not have - Felgo rewrites that
-    file when it is present rather than creating one, so a game with no
-    \c config.json reports the \c test stage whatever the build says. Adding one
-    means adding a tracked file that the build edits behind you every time you
-    configure, which is a trade worth making deliberately rather than by
-    default.
+    \c PRODUCT_STAGE needs one more file to mean anything. Setting it in the
+    build is not what the running app reads: it reads \c qml/config.json, and
+    Felgo rewrites four fields of that file - the identifier, the two version
+    numbers and the stage - out of the values above. Rewrites, not creates. A
+    project without a \c config.json gets no warning and no error; it simply
+    reports the \c test stage forever, whatever the build was told.
+
+    \quotefile qml/config.json
+
+    That the build edits a file in the source tree has a consequence worth
+    knowing before it surprises you: configuring a Debug build leaves
+    \c stage on \c test, and configuring a Release build leaves it on
+    \c publish, so a file you have not touched shows up as changed depending on
+    which build directory you configured last. What belongs in version control
+    is the shipping value.
+
+    The license key is the one thing here the build cannot decide. It is still
+    empty, and that - not anything above - is what the Felgo splash screen is
+    waiting for.
 
     On macOS there is one more thing, and it is the kind of problem that presents
     itself as something else entirely: the app's icon stops appearing. Not a
