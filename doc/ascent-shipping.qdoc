@@ -223,27 +223,50 @@
 
     \section1 Building for Publishing
 
-    The game has been running all this way on files copied next to the binary:
+    The game has been running all this way on files copied next to the binary,
+    and that is the right way to develop: a QML edit is picked up by restarting
+    the app rather than by rebuilding it. It is not a way to ship. Deployed
+    files are files - visible in the bundle, editable in place, and loaded from
+    a path that has to be correct at startup.
+
+    A shipping build compiles them into the binary instead. Felgo's own
+    instruction for the switch is to comment one line out and two lines back in,
+    which works exactly until the day somebody does one half of it. So the
+    switch is not a comment:
 
     \snippet CMakeLists.txt qml-deployment
 
-    That is the arrangement to develop in. A QML edit is picked up by restarting
-    the app rather than by rebuilding it, and on a game where most of the work is
-    tuning numbers until something feels right, that difference is most of the
-    day.
-
-    It is also not something to ship. Deployed files are files: they are visible
-    in the bundle, editable in place, and loaded from a path that has to be
-    correct at runtime. The publishing configuration compiles the QML into the
-    binary instead - comment out \c deploy_resources, uncomment \c QML_FILES and
-    \c RESOURCES, and point the entry at the resource system:
+    Three things have to agree here, and only one question decides all three:
+    where the QML goes, which path \c main.cpp is handed, and the stage Felgo
+    reports. \c CMAKE_BUILD_TYPE already knows the answer - a Debug build is one
+    somebody is working in - so it is asked rather than duplicated. The entry
+    point travels as a compile definition:
 
     \code
-    felgo.setMainQmlFileName(QStringLiteral("qrc:/qml/AscentMain.qml"));
+    felgo.setMainQmlFileName(QStringLiteral(ASCENT_MAIN_QML));
     \endcode
 
-    \c PRODUCT_STAGE moves from \c test to \c publish at the same time, and the
-    license key stops being optional if you want the Felgo splash screen gone.
+    That looks like indirection for its own sake until you picture the failure
+    it removes: a release build with the QML compiled in and \c main.cpp still
+    pointing at a directory that is no longer there. The app starts, the window
+    opens, and nothing is in it.
+
+    One case does not answer the question the same way. Multi-config generators
+    - Xcode, and therefore every iOS build - leave \c CMAKE_BUILD_TYPE empty,
+    because the configuration is chosen when building rather than when
+    configuring. Those fall to the shipping arrangement, which is the right way
+    round: loose files are what goes missing on a device, while a reload you
+    have to rebuild for is only an inconvenience.
+
+    Two things this does not do. The license key is still empty, and that is
+    what the Felgo splash screen is waiting for rather than anything in the
+    build. And \c PRODUCT_STAGE reaches the running app only through
+    \c qml/config.json, a file this project does not have - Felgo rewrites that
+    file when it is present rather than creating one, so a game with no
+    \c config.json reports the \c test stage whatever the build says. Adding one
+    means adding a tracked file that the build edits behind you every time you
+    configure, which is a trade worth making deliberately rather than by
+    default.
 
     On macOS there is one more thing, and it is the kind of problem that presents
     itself as something else entirely: the app's icon stops appearing. Not a

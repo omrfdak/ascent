@@ -198,24 +198,46 @@ endif()</pre>
 <p>The phone is unaffected, because the pair the phone wants is the pair the SDK has. That is the whole of it, and knowing it early would have saved a day: when a toolchain error mentions a platform and not just an architecture, check what pairs you actually have before assuming the build is misconfigured.</p>
 <p>Getting onto the device is then ordinary Apple ceremony, and free. A personal Apple ID in Xcode is enough for a Personal Team, which signs apps that run for seven days. Two of the steps have to happen on the phone itself: enabling Developer Mode under Settings &gt; Privacy &amp; Security, which reboots it, and trusting the certificate under Settings &gt; General &gt; VPN &amp; Device Management, without which the app installs and then refuses to launch.</p>
 <h2 id="building-for-publishing">Building for Publishing</h2>
-<p>The game has been running all this way on files copied next to the binary:</p>
-<pre class="cpp" translate="no"># Development: copy QML next to the binary so edits do not need a rebuild.
-# For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
-# which compiles the QML into the binary.
-deploy_resources(&quot;${QmlFiles};${AssetsFiles}&quot;)
+<p>The game has been running all this way on files copied next to the binary, and that is the right way to develop: a QML edit is picked up by restarting the app rather than by rebuilding it. It is not a way to ship. Deployed files are files - visible in the bundle, editable in place, and loaded from a path that has to be correct at startup.</p>
+<p>A shipping build compiles them into the binary instead. Felgo's own instruction for the switch is to comment one line out and two lines back in, which works exactly until the day somebody does one half of it. So the switch is not a comment:</p>
+<pre class="cpp" translate="no"># In a development build the QML and the assets are copied next to the binary,
+# so a QML edit is picked up by restarting the app rather than by rebuilding it.
+# On a game whose work is mostly tuning numbers until something feels right,
+# that difference is most of the day.
+#
+# Everywhere else they are compiled into the binary instead. Nothing the game
+# runs on is then a loose file in the bundle: nothing to edit in place, nothing
+# that can go missing, and one path fewer that has to be right at startup.
+#
+# Multi-config generators - Xcode, and therefore every iOS build - leave
+# CMAKE_BUILD_TYPE empty, because the configuration is picked when building
+# rather than here. Those land on the shipping arrangement, which is the safe
+# way round: loose files are what breaks on a device, while a missed reload is
+# only an inconvenience.
+if(CMAKE_BUILD_TYPE STREQUAL &quot;Debug&quot;)
+  deploy_resources(&quot;${QmlFiles};${AssetsFiles}&quot;)
+  set(AscentQmlModuleContents &quot;&quot;)
+  set(AscentMainQml &quot;qml/AscentMain.qml&quot;)
+else()
+  set(AscentQmlModuleContents QML_FILES ${QmlFiles} RESOURCES ${AssetsFiles})
+  set(AscentMainQml &quot;qrc:/qml/AscentMain.qml&quot;)
+endif()
 
 qt_add_qml_module(Ascent
     URI Ascent
     VERSION 1.0
-# uncomment for publishing:
-#    QML_FILES ${QmlFiles}
-#    RESOURCES ${AssetsFiles}
+    ${AscentQmlModuleContents}
     NO_RESOURCE_TARGET_PATH
-)</pre>
-<p>That is the arrangement to develop in. A QML edit is picked up by restarting the app rather than by rebuilding it, and on a game where most of the work is tuning numbers until something feels right, that difference is most of the day.</p>
-<p>It is also not something to ship. Deployed files are files: they are visible in the bundle, editable in place, and loaded from a path that has to be correct at runtime. The publishing configuration compiles the QML into the binary instead - comment out <code translate="no">deploy_resources</code>, uncomment <code translate="no">QML_FILES</code> and <code translate="no">RESOURCES</code>, and point the entry at the resource system:</p>
-<pre class="cpp" translate="no">felgo<span class="operator">.</span>setMainQmlFileName(<span class="type">QStringLiteral</span>(<span class="string">&quot;qrc:/qml/AscentMain.qml&quot;</span>));</pre>
-<p><code translate="no">PRODUCT_STAGE</code> moves from <code translate="no">test</code> to <code translate="no">publish</code> at the same time, and the license key stops being optional if you want the Felgo splash screen gone.</p>
+)
+
+# The entry point is compiled in rather than chosen at runtime, because it is
+# the same decision as the one above and must not be able to disagree with it.
+target_compile_definitions(Ascent PRIVATE ASCENT_MAIN_QML=&quot;${AscentMainQml}&quot;)</pre>
+<p>Three things have to agree here, and only one question decides all three: where the QML goes, which path <code translate="no">main.cpp</code> is handed, and the stage Felgo reports. <code translate="no">CMAKE_BUILD_TYPE</code> already knows the answer - a Debug build is one somebody is working in - so it is asked rather than duplicated. The entry point travels as a compile definition:</p>
+<pre class="cpp" translate="no">felgo<span class="operator">.</span>setMainQmlFileName(<span class="type">QStringLiteral</span>(ASCENT_MAIN_QML));</pre>
+<p>That looks like indirection for its own sake until you picture the failure it removes: a release build with the QML compiled in and <code translate="no">main.cpp</code> still pointing at a directory that is no longer there. The app starts, the window opens, and nothing is in it.</p>
+<p>One case does not answer the question the same way. Multi-config generators - Xcode, and therefore every iOS build - leave <code translate="no">CMAKE_BUILD_TYPE</code> empty, because the configuration is chosen when building rather than when configuring. Those fall to the shipping arrangement, which is the right way round: loose files are what goes missing on a device, while a reload you have to rebuild for is only an inconvenience.</p>
+<p>Two things this does not do. The license key is still empty, and that is what the Felgo splash screen is waiting for rather than anything in the build. And <code translate="no">PRODUCT_STAGE</code> reaches the running app only through <code translate="no">qml/config.json</code>, a file this project does not have - Felgo rewrites that file when it is present rather than creating one, so a game with no <code translate="no">config.json</code> reports the <code translate="no">test</code> stage whatever the build says. Adding one means adding a tracked file that the build edits behind you every time you configure, which is a trade worth making deliberately rather than by default.</p>
 <p>On macOS there is one more thing, and it is the kind of problem that presents itself as something else entirely: the app's icon stops appearing. Not a missing icon - the file is in the bundle, correctly named, correctly referenced. The bundle is simply no longer trusted.</p>
 <pre class="cpp" translate="no">if(APPLE AND NOT IOS)
   # The linker signs the executable ad hoc, and everything copied into the bundle

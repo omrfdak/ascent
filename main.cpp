@@ -60,9 +60,10 @@ int main(int argc, char *argv[])
 
     felgo.setLicenseKey(PRODUCT_LICENSE_KEY);
 
-    // Development entry point. For publishing this becomes "qrc:/qml/AscentMain.qml",
-    // which loads the QML from the binary instead of the deployed files.
-    felgo.setMainQmlFileName(QStringLiteral("qml/AscentMain.qml"));
+    // A file beside the binary in a development build, and a path into the
+    // binary in every other one. Which of the two arrives here is decided in
+    // CMakeLists.txt, by the same branch that decides where the QML is put.
+    felgo.setMainQmlFileName(QStringLiteral(ASCENT_MAIN_QML));
 
     engine.load(QUrl(felgo.mainQmlFileName()));
 

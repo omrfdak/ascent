@@ -40,13 +40,20 @@
 set(PRODUCT_IDENTIFIER &quot;com.merdak.ascent&quot;)
 set(PRODUCT_VERSION_NAME &quot;1.0.0&quot;)
 set(PRODUCT_VERSION_CODE 1)
-set(PRODUCT_STAGE &quot;test&quot;)
 set(PRODUCT_LICENSE_KEY &quot;&quot;)
+
+# A Debug build is one somebody is working in; anything else is meant to leave
+# the machine.
+if(CMAKE_BUILD_TYPE STREQUAL &quot;Debug&quot;)
+  set(PRODUCT_STAGE &quot;test&quot;)
+else()
+  set(PRODUCT_STAGE &quot;publish&quot;)
+endif()
 
 set(FELGO_PLUGINS
 )</pre>
 <p><code translate="no">find_package(Felgo)</code> brings in everything Felgo ships - the QML types, the plugins, the deployment helpers. The product variables underneath it are what end up in the app bundle: the identifier that identifies your app to the app stores, the version the store shows, and the license key. Leave the key empty while you build. It only removes the Felgo splash screen, and the splash screen turns out to be something we have to handle anyway.</p>
-<p><code translate="no">PRODUCT_STAGE</code> stays at <code translate="no">test</code> until the very end, when switching it to <code translate="no">publish</code> is part of preparing a release build.</p>
+<p><code translate="no">PRODUCT_STAGE</code> is the one value here that is not written down flat. Felgo asks for <code translate="no">test</code> while you are working and <code translate="no">publish</code> once you are shipping, and that is the same question as &quot;is this a Debug build&quot;, so it is answered by asking that instead of by remembering to edit a line. The last chapter does the same thing to two more decisions, for the same reason.</p>
 <h2 id="the-game-window-and-the-scenes">The Game Window and the Scenes</h2>
 <p>A Felgo game starts with a <code translate="no">GameWindow</code> holding one or more scenes:</p>
 <pre class="qml" translate="no"><span class="type">GameWindow</span> {

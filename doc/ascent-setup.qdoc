@@ -22,8 +22,12 @@
     while you build. It only removes the Felgo splash screen, and the splash
     screen turns out to be something we have to handle anyway.
 
-    \c PRODUCT_STAGE stays at \c test until the very end, when switching it to
-    \c publish is part of preparing a release build.
+    \c PRODUCT_STAGE is the one value here that is not written down flat. Felgo
+    asks for \c test while you are working and \c publish once you are
+    shipping, and that is the same question as "is this a Debug build", so it
+    is answered by asking that instead of by remembering to edit a line. The
+    last chapter does the same thing to two more decisions, for the same
+    reason.
 
     \section1 The Game Window and the Scenes
 

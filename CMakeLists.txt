@@ -24,8 +24,15 @@ find_package(Felgo REQUIRED)
 set(PRODUCT_IDENTIFIER "com.merdak.ascent")
 set(PRODUCT_VERSION_NAME "1.0.0")
 set(PRODUCT_VERSION_CODE 1)
-set(PRODUCT_STAGE "test")
 set(PRODUCT_LICENSE_KEY "")
+
+# A Debug build is one somebody is working in; anything else is meant to leave
+# the machine.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(PRODUCT_STAGE "test")
+else()
+  set(PRODUCT_STAGE "publish")
+endif()
 
 set(FELGO_PLUGINS
 )
@@ -73,19 +80,39 @@ if(APPLE AND NOT IOS)
 endif()
 
 #! [qml-deployment]
-# Development: copy QML next to the binary so edits do not need a rebuild.
-# For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
-# which compiles the QML into the binary.
-deploy_resources("${QmlFiles};${AssetsFiles}")
+# In a development build the QML and the assets are copied next to the binary,
+# so a QML edit is picked up by restarting the app rather than by rebuilding it.
+# On a game whose work is mostly tuning numbers until something feels right,
+# that difference is most of the day.
+#
+# Everywhere else they are compiled into the binary instead. Nothing the game
+# runs on is then a loose file in the bundle: nothing to edit in place, nothing
+# that can go missing, and one path fewer that has to be right at startup.
+#
+# Multi-config generators - Xcode, and therefore every iOS build - leave
+# CMAKE_BUILD_TYPE empty, because the configuration is picked when building
+# rather than here. Those land on the shipping arrangement, which is the safe
+# way round: loose files are what breaks on a device, while a missed reload is
+# only an inconvenience.
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  deploy_resources("${QmlFiles};${AssetsFiles}")
+  set(AscentQmlModuleContents "")
+  set(AscentMainQml "qml/AscentMain.qml")
+else()
+  set(AscentQmlModuleContents QML_FILES ${QmlFiles} RESOURCES ${AssetsFiles})
+  set(AscentMainQml "qrc:/qml/AscentMain.qml")
+endif()
 
 qt_add_qml_module(Ascent
     URI Ascent
     VERSION 1.0
-# uncomment for publishing:
-#    QML_FILES ${QmlFiles}
-#    RESOURCES ${AssetsFiles}
+    ${AscentQmlModuleContents}
     NO_RESOURCE_TARGET_PATH
 )
+
+# The entry point is compiled in rather than chosen at runtime, because it is
+# the same decision as the one above and must not be able to disagree with it.
+target_compile_definitions(Ascent PRIVATE ASCENT_MAIN_QML="${AscentMainQml}")
 #! [qml-deployment]
 
 #! [ios-media-backend]
