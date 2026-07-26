@@ -4,6 +4,8 @@
     sky and nothing else: a launch screen that says "Ascent" would be a second
     title screen, and the first thing the player actually sees is the sky the
     scene fades in over. Anything drawn here would have to be drawn twice.
+
+    The name has a space in it because that is the name Felgo's build looks for.
 -->
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
     <dependencies>

@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Qt 6.8's own minimum. Set here rather than left blank because it also becomes
-# LSMinimumSystemVersion, and an empty value there is a bundle that tells macOS
-# nothing about what it can run on.
-if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+project(Ascent VERSION 1.0.0 LANGUAGES CXX)
+
+# Qt 6.8's own minimum on the Mac. Set here rather than left blank because it
+# also becomes LSMinimumSystemVersion, and an empty value there is a bundle that
+# tells macOS nothing about what it can run on.
+#
+# Only on the Mac: on iOS the value arrives from Qt's own toolchain file, which
+# knows which iOS this Qt was built against. Setting it here as well used to
+# leak the Mac's number into the iOS build and claim support for an iOS this Qt
+# cannot run on.
+if(APPLE AND NOT IOS AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "" FORCE)
 endif()
-
-project(Ascent VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -34,6 +39,11 @@ if(AssetsFiles AND QmlFiles)
 endif()
 
 add_subdirectory(src)
+
+# Without this Qt adds a launch screen of its own alongside the one in ios/, and
+# both get compiled into the bundle. Only the one Project-Info.plist names is
+# ever shown, so the other is a storyboard that exists to be ignored.
+set(QT_NO_SET_DEFAULT_IOS_LAUNCH_SCREEN TRUE)
 
 qt_add_executable(Ascent
     main.cpp
@@ -62,13 +72,6 @@ if(APPLE AND NOT IOS)
     MACOSX_BUNDLE_BUNDLE_VERSION "${PRODUCT_VERSION_CODE}")
 endif()
 
-if(IOS)
-  # The screen iOS shows before the first frame. Qt writes the plist key for it,
-  # which is why the storyboard is named here instead of just being copied in.
-  set_target_properties(Ascent PROPERTIES
-    QT_IOS_LAUNCH_SCREEN "${CMAKE_CURRENT_SOURCE_DIR}/ios/LaunchScreen.storyboard")
-endif()
-
 # Development: copy QML next to the binary so edits do not need a rebuild.
 # For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
 # which compiles the QML into the binary.
@@ -82,6 +85,20 @@ qt_add_qml_module(Ascent
 #    RESOURCES ${AssetsFiles}
     NO_RESOURCE_TARGET_PATH
 )
+
+if(IOS)
+  # Qt's default media backend on iOS is its own build of ffmpeg, which Felgo
+  # ships as an xcframework with an arm64 simulator slice and no Intel one -
+  # while the Qt in the same kit has an Intel simulator slice and no arm64 one.
+  # The two cannot be linked together, so the simulator build fails on missing
+  # av_* symbols.
+  #
+  # The darwin backend has neither problem: it is AVFoundation, it is in both
+  # architectures, and it carries no bundled decoder into the app. The game only
+  # plays its own short sounds, which is what this backend is for.
+  qt_import_plugins(Ascent
+    INCLUDE_BY_TYPE multimedia Qt6::QDarwinMediaPlugin)
+endif()
 
 target_compile_definitions(Ascent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
