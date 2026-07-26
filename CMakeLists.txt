@@ -72,6 +72,7 @@ if(APPLE AND NOT IOS)
     MACOSX_BUNDLE_BUNDLE_VERSION "${PRODUCT_VERSION_CODE}")
 endif()
 
+#! [qml-deployment]
 # Development: copy QML next to the binary so edits do not need a rebuild.
 # For publishing, comment this out and uncomment QML_FILES/RESOURCES below instead,
 # which compiles the QML into the binary.
@@ -85,7 +86,9 @@ qt_add_qml_module(Ascent
 #    RESOURCES ${AssetsFiles}
     NO_RESOURCE_TARGET_PATH
 )
+#! [qml-deployment]
 
+#! [ios-media-backend]
 if(IOS)
   # Qt's default media backend on iOS is its own build of ffmpeg, which Felgo
   # ships as an xcframework with an arm64 simulator slice and no Intel one -
@@ -99,12 +102,14 @@ if(IOS)
   qt_import_plugins(Ascent
     INCLUDE_BY_TYPE multimedia Qt6::QDarwinMediaPlugin)
 endif()
+#! [ios-media-backend]
 
 target_compile_definitions(Ascent
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 target_link_libraries(Ascent PRIVATE AscentCore Felgo)
 
+#! [bundle-signature]
 if(APPLE AND NOT IOS)
   # The linker signs the executable ad hoc, and everything copied into the bundle
   # afterwards - the icon, the QML, the assets - lands outside that signature.
@@ -123,6 +128,7 @@ if(APPLE AND NOT IOS)
     VERBATIM)
   add_dependencies(AscentSignature Ascent)
 endif()
+#! [bundle-signature]
 
 # The tutorial is generated on demand: cmake --build . --target docs
 # It is kept out of the default build so a documentation warning cannot break a

@@ -21,6 +21,7 @@ public:
   explicit RoundSource(QObject *parent = nullptr);
   ~RoundSource() override;
 
+  //! [round-source]
   // Starts and stops the cycle of rounds.
   Q_INVOKABLE virtual void start() = 0;
   Q_INVOKABLE virtual void stop() = 0;
@@ -42,6 +43,7 @@ signals:
 
   void cashOutConfirmed(qreal payout, qreal multiplier);
   void cashOutRejected();
+  //! [round-source]
 };
 
 #endif // ROUNDSOURCE_H

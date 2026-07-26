@@ -139,7 +139,125 @@
 
     \section1 Running on iOS
 
+    Nothing in the game had to change to run on a phone. Everything that did
+    change is in the build, and it is worth walking through, because most of it
+    is Felgo and Qt each having an opinion about the same file.
+
+    Felgo's iOS configuration points the bundle at \c ios/Project-Info.plist by
+    name, whether or not that file exists, and looks for a launch screen called
+    \c {ios/Launch Screen.storyboard} - with the space. Those two names are the
+    convention: write files with those names and they are picked up, and any
+    mechanism that wants to supply its own instead will be quietly overruled.
+    Qt's \c QT_IOS_LAUNCH_SCREEN is one such mechanism. Left in, it generates a
+    second storyboard and compiles it into the bundle alongside the real one,
+    where it sits being ignored, because only the one the plist names is ever
+    shown. Suppressing it is one line:
+
+    \code
+    set(QT_NO_SET_DEFAULT_IOS_LAUNCH_SCREEN TRUE)
+    \endcode
+
+    The plist itself is worth keeping short. Templates tend to arrive declaring
+    a reason for the camera, the microphone, the photo library, contacts,
+    Bluetooth and location. This game asks for none of them, and a usage string
+    for a permission that is never requested is a question at review time with
+    no answer behind it. What is left is the identity of the app, portrait
+    orientation - the balloon rises, and landscape would letterbox the game into
+    a strip - and the launch screen's name.
+
+    One line in the same file had a longer story than it looks:
+
+    \code
+    if(APPLE AND NOT IOS AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+      set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "" FORCE)
+    endif()
+    \endcode
+
+    \c CMAKE_OSX_DEPLOYMENT_TARGET is not the Mac's variable. It is Apple's, and
+    on an iOS build it becomes \c IPHONEOS_DEPLOYMENT_TARGET - so a macOS minimum
+    of 12.0 set before \c project() left the iOS bundle claiming to run on iOS
+    12, which the Qt inside it cannot do. The guard keeps the number on the
+    platform it was chosen for and lets Qt's own toolchain supply the iOS one,
+    which is 16 and is not a number this project should be inventing.
+
+    Sound needed a decision rather than a fix:
+
+    \snippet CMakeLists.txt ios-media-backend
+
+    Qt's default media backend on iOS is its own build of ffmpeg. Swapping it for
+    AVFoundation is a smaller app and one less bundled decoder to ship, and a
+    game that plays a handful of short effects loses nothing by it.
+
+    \section2 The Simulator, and Why the Phone Is the Test
+
+    The Simulator did not work, and the reason is worth stating precisely,
+    because it looks like a project error for a long time before it turns out
+    not to be one.
+
+    An iOS binary does not target an architecture. It targets an architecture
+    \e and a platform - \c {arm64 + iOS} and \c {arm64 + iOS-simulator} are as
+    different as arm64 and x86_64, and a linker will say so. Three such pairs
+    matter on a Mac with Apple silicon, and the Felgo SDK ships two: the device
+    slice is \c {arm64 + iOS}, and the simulator slice is
+    \c {x86_64 + iOS-simulator}, from the era when simulators ran Intel code. The
+    modern simulator runtime accepts \c arm64 only. So the arm64 simulator build
+    fails to link - \c {building for 'iOS-simulator', but linking in object file
+    built for 'iOS'} - and the x86_64 build links but will not install.
+
+    The phone is unaffected, because the pair the phone wants is the pair the
+    SDK has. That is the whole of it, and knowing it early would have saved a
+    day: when a toolchain error mentions a platform and not just an
+    architecture, check what pairs you actually have before assuming the build
+    is misconfigured.
+
+    Getting onto the device is then ordinary Apple ceremony, and free. A personal
+    Apple ID in Xcode is enough for a Personal Team, which signs apps that run
+    for seven days. Two of the steps have to happen on the phone itself: enabling
+    Developer Mode under Settings > Privacy & Security, which reboots it, and
+    trusting the certificate under Settings > General > VPN & Device Management,
+    without which the app installs and then refuses to launch.
+
     \section1 Building for Publishing
+
+    The game has been running all this way on files copied next to the binary:
+
+    \snippet CMakeLists.txt qml-deployment
+
+    That is the arrangement to develop in. A QML edit is picked up by restarting
+    the app rather than by rebuilding it, and on a game where most of the work is
+    tuning numbers until something feels right, that difference is most of the
+    day.
+
+    It is also not something to ship. Deployed files are files: they are visible
+    in the bundle, editable in place, and loaded from a path that has to be
+    correct at runtime. The publishing configuration compiles the QML into the
+    binary instead - comment out \c deploy_resources, uncomment \c QML_FILES and
+    \c RESOURCES, and point the entry at the resource system:
+
+    \code
+    felgo.setMainQmlFileName(QStringLiteral("qrc:/qml/AscentMain.qml"));
+    \endcode
+
+    \c PRODUCT_STAGE moves from \c test to \c publish at the same time, and the
+    license key stops being optional if you want the Felgo splash screen gone.
+
+    On macOS there is one more thing, and it is the kind of problem that presents
+    itself as something else entirely: the app's icon stops appearing. Not a
+    missing icon - the file is in the bundle, correctly named, correctly
+    referenced. The bundle is simply no longer trusted.
+
+    \snippet CMakeLists.txt bundle-signature
+
+    The linker signs the executable ad hoc, and everything copied in afterwards -
+    the icon, the QML, the assets - lands outside that signature. macOS reads the
+    result as a bundle whose sealed resources have gone missing, and declines to
+    use its icon, which is the only symptom you get.
+
+    Why a target rather than the obvious \c POST_BUILD command: a \c POST_BUILD
+    command belongs to the link step, and a QML-only change does not relink. The
+    file gets copied in, the signature is left describing the bundle as it was
+    before, and the icon disappears on exactly the kind of build that happens
+    most often. A custom target is always out of date, so it runs every time.
 
     \include includes/chapters.qdocinc chapters
 */
